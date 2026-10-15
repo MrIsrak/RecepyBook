@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Уязвимость безопасности
+    url: https://github.com/MrIsrak/RecepyBook/security/advisories/new
+    about: Сообщай о проблемах безопасности приватно, не в открытых issue

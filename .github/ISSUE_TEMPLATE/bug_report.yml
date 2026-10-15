@@ -1,0 +1,42 @@
+name: Ошибка
+description: Что-то работает не так
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: Что случилось
+      description: Что ты делал, что ожидал и что получил
+    validations:
+      required: true
+  - type: input
+    id: link
+    attributes:
+      label: Ссылка на рецепт (если ошибка при импорте)
+      placeholder: https://www.instagram.com/p/...
+  - type: textarea
+    id: steps
+    attributes:
+      label: Как повторить
+      value: |
+        1.
+        2.
+        3.
+  - type: input
+    id: version
+    attributes:
+      label: Версия приложения
+      description: Настройки → внизу экрана
+      placeholder: "1.0.0"
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Телефон и версия Android
+      placeholder: Samsung A54, Android 14
+  - type: dropdown
+    id: ai
+    attributes:
+      label: Ключ Gemini включён?
+      options: ["Нет", "Да"]

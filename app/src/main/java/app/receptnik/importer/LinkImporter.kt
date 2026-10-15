@@ -4,6 +4,7 @@ import app.receptnik.core.CaptionParser
 import app.receptnik.core.NutritionDb
 import app.receptnik.core.RecipeDraft
 import app.receptnik.core.TextUtil
+import app.receptnik.core.TikTokLinks
 import app.receptnik.core.VideoLinks
 import java.io.File
 import kotlinx.serialization.json.Json
@@ -91,7 +92,8 @@ class LinkImporter(private val gemini: () -> GeminiClient?, private val cacheDir
             throw e
         } catch (e: Exception) {
             // Last resort: the link preview social networks serve to messenger crawlers
-            runCatching { ogPage(url, Http.UA_BOT) }.getOrNull()?.takeIf { it.text.isNotBlank() }
+            runCatching { ogPage(url, Http.UA_BOT) }.getOrNull()
+                ?.takeIf { it.text.isNotBlank() && !(platform == Platform.TIKTOK && TikTokLinks.isGeneric(it.text)) }
                 ?: throw if (e is ImportException) e else ImportException(ImportException.Reason.BAD_RESPONSE, e.message)
         }
 
@@ -167,7 +169,8 @@ class LinkImporter(private val gemini: () -> GeminiClient?, private val cacheDir
         Platform.TIKTOK -> {
             // Loading the page also sets the cookies the video CDN requires
             val page = runCatching { Http.getWithRetry(url, Http.UA_DESKTOP, attempts = 2) }.getOrNull()
-            page?.let { tiktokEmbedded(Jsoup.parse(it.body, it.finalUrl))?.videoUrl }
+            page?.let { tiktokEmbedded(Jsoup.parse(it.body, it.finalUrl), TikTokLinks.videoId(url))?.videoUrl }
+                ?: runCatching { tikwm(url)?.videoUrl }.getOrNull()
         }
         Platform.INSTAGRAM, Platform.FACEBOOK -> {
             val page = runCatching { Http.get(url, Http.UA_BOT) }.getOrNull()
@@ -191,49 +194,97 @@ class LinkImporter(private val gemini: () -> GeminiClient?, private val cacheDir
     // ---------- Platforms ----------
 
     /**
-     * TikTok: 1) expand the short link; 2) oEmbed (full caption);
-     * 3) if oEmbed is rate-limited (429), embedded page data; 4) og: tags.
+     * TikTok, in order:
+     * 1) expand the short link, stopping at the first URL that contains the video ID
+     *    (TikTok may redirect further, to its home page);
+     * 2) oEmbed; 3) the video page's embedded JSON; 4) the embed player page;
+     * 5) the public tikwm.com API; 6) og: tags of the video page.
+     * Generic site-wide previews ("TikTok | Make Your Day") are rejected at every step.
      */
     private suspend fun tiktok(url: String): Source {
-        val full = runCatching { Http.resolve(url) }.getOrDefault(url)
-        val canonical = full.substringBefore('?')
+        val full = runCatching { Http.resolve(url, stopWhen = { TikTokLinks.videoId(it) != null }) }.getOrDefault(url)
+        val id = TikTokLinks.videoId(full) ?: TikTokLinks.videoId(url)
+        val canonical = TikTokLinks.canonical(full) ?: full.substringBefore('?')
         var firstError: Exception? = null
+        fun good(s: Source?) = s != null && !TikTokLinks.isGeneric(s.text)
 
-        // 1. oEmbed
-        try {
-            val page = Http.getWithRetry("https://www.tiktok.com/oembed?url=" + enc(canonical), Http.UA_DESKTOP, attempts = 2)
-            val o = json.parseToJsonElement(page.body).jsonObject
-            val text = o["title"]?.jsonPrimitive?.content.orEmpty()
-            if (text.isNotBlank()) return Source(
-                url = canonical,
-                text = text,
-                image = o["thumbnail_url"]?.jsonPrimitive?.content,
-                author = o["author_name"]?.jsonPrimitive?.content,
-            )
+        suspend fun attempt(block: suspend () -> Source?): Source? = try {
+            block()?.takeIf { good(it) }
         } catch (e: kotlin.coroutines.cancellation.CancellationException) {
             throw e
         } catch (e: Exception) {
-            firstError = e
+            if (firstError == null) firstError = e
+            null
         }
 
-        // 2. Video page: embedded data (__UNIVERSAL_DATA_FOR_REHYDRATION__ / SIGI_STATE) and og: tags
-        for (ua in listOf(Http.UA_DESKTOP, Http.UA_BOT)) {
-            val page = runCatching { Http.getWithRetry(canonical, ua, attempts = 2) }.getOrNull() ?: continue
-            val doc = Jsoup.parse(page.body, page.finalUrl)
-            tiktokEmbedded(doc)?.let { return it.copy(url = canonical) }
-            val og = fromDoc(canonical, doc)
-            if (og.text.isNotBlank()) return og.copy(url = canonical)
+        // 2. oEmbed
+        attempt {
+            val page = Http.getWithRetry("https://www.tiktok.com/oembed?url=" + enc(canonical), Http.UA_DESKTOP, attempts = 2)
+            val o = json.parseToJsonElement(page.body).jsonObject
+            Source(
+                url = canonical,
+                text = o["title"]?.jsonPrimitive?.content.orEmpty(),
+                image = o["thumbnail_url"]?.jsonPrimitive?.content,
+                author = o["author_name"]?.jsonPrimitive?.content,
+            )
+        }?.let { return it }
+
+        // 3. Video page: embedded JSON
+        var ogFallback: Source? = null
+        for (ua in listOf(Http.UA_DESKTOP, Http.UA_MOBILE)) {
+            val found = attempt {
+                val page = Http.getWithRetry(canonical, ua, attempts = 1)
+                val doc = Jsoup.parse(page.body, page.finalUrl)
+                if (ogFallback == null && TikTokLinks.videoId(page.finalUrl) != null) {
+                    ogFallback = fromDoc(canonical, doc).takeIf { good(it) }
+                }
+                tiktokEmbedded(doc, id)
+            }
+            if (found != null) return found.copy(url = canonical)
         }
+
+        if (id != null) {
+            // 4. Embed player page
+            attempt {
+                val page = Http.getWithRetry("https://www.tiktok.com/embed/v2/$id", Http.UA_DESKTOP, attempts = 1)
+                tiktokEmbedded(Jsoup.parse(page.body, page.finalUrl), id)
+            }?.let { return it.copy(url = canonical) }
+
+            // 5. Public API (third party; see PRIVACY.md)
+            attempt { tikwm(canonical) }?.let { return it.copy(url = canonical) }
+        }
+
+        // 6. og: tags of the actual video page
+        ogFallback?.let { return it }
         throw (firstError as? ImportException) ?: ImportException(ImportException.Reason.BAD_RESPONSE, firstError?.message)
     }
 
-    private fun tiktokEmbedded(doc: Document): Source? {
-        val raw = doc.selectFirst("script#__UNIVERSAL_DATA_FOR_REHYDRATION__")?.data()
-            ?: doc.selectFirst("script#SIGI_STATE")?.data()
-            ?: return null
-        val root = runCatching { json.parseToJsonElement(raw) }.getOrNull() ?: return null
-        val item = findItemStruct(root) ?: return null
-        val desc = (item["desc"] as? kotlinx.serialization.json.JsonPrimitive)?.content.orEmpty()
+    /** tikwm.com public API: returns the caption, cover and a direct video URL. */
+    private suspend fun tikwm(videoUrl: String): Source? {
+        val page = Http.getWithRetry("https://www.tikwm.com/api/?url=" + enc(videoUrl), Http.UA_DESKTOP, attempts = 2)
+        val root = json.parseToJsonElement(page.body).jsonObject
+        if (root["code"]?.jsonPrimitive?.content != "0") return null
+        val d = root["data"] as? kotlinx.serialization.json.JsonObject ?: return null
+        fun str(k: String) = (d[k] as? kotlinx.serialization.json.JsonPrimitive)?.content
+        fun abs(u: String?) = u?.let { if (it.startsWith("/")) "https://www.tikwm.com$it" else it }
+        return Source(
+            url = videoUrl,
+            text = str("title").orEmpty(),
+            image = abs(str("cover") ?: str("origin_cover")),
+            author = ((d["author"] as? kotlinx.serialization.json.JsonObject)?.get("unique_id") as? kotlinx.serialization.json.JsonPrimitive)?.content,
+            videoUrl = abs(str("play")),
+        )
+    }
+
+    private fun tiktokEmbedded(doc: Document, id: String? = null): Source? {
+        val scripts = listOf("script#__UNIVERSAL_DATA_FOR_REHYDRATION__", "script#SIGI_STATE", "script#__FRONTITY_CONNECT_STATE__", "script#__NEXT_DATA__")
+            .mapNotNull { doc.selectFirst(it)?.data() }
+        val item = scripts.firstNotNullOfOrNull { raw ->
+            runCatching { json.parseToJsonElement(raw) }.getOrNull()?.let { findItemStruct(it, id) }
+        } ?: return null
+        val desc = listOf("desc", "text").firstNotNullOfOrNull { k ->
+            (item[k] as? kotlinx.serialization.json.JsonPrimitive)?.content?.takeIf { it.isNotBlank() }
+        }.orEmpty()
         if (desc.isBlank() && item["video"] == null) return null
         val author = (item["author"] as? kotlinx.serialization.json.JsonObject)?.get("uniqueId")
             ?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.content }
@@ -252,14 +303,20 @@ class LinkImporter(private val gemini: () -> GeminiClient?, private val cacheDir
     }
 
     /** Finds the video object (with desc and id fields) anywhere in the JSON. */
-    private fun findItemStruct(el: kotlinx.serialization.json.JsonElement, depth: Int = 0): kotlinx.serialization.json.JsonObject? {
-        if (depth > 8) return null
+    private fun findItemStruct(
+        el: kotlinx.serialization.json.JsonElement,
+        wantedId: String? = null,
+        depth: Int = 0,
+    ): kotlinx.serialization.json.JsonObject? {
+        if (depth > 10) return null
         return when (el) {
             is kotlinx.serialization.json.JsonObject -> {
-                if ("desc" in el && "id" in el) el
-                else el.values.firstNotNullOfOrNull { findItemStruct(it, depth + 1) }
+                val idValue = (el["id"] as? kotlinx.serialization.json.JsonPrimitive)?.content
+                val hasText = "desc" in el || ("text" in el && "video" in el)
+                if (hasText && idValue != null && (wantedId == null || idValue == wantedId)) el
+                else el.values.firstNotNullOfOrNull { findItemStruct(it, wantedId, depth + 1) }
             }
-            is kotlinx.serialization.json.JsonArray -> el.firstNotNullOfOrNull { findItemStruct(it, depth + 1) }
+            is kotlinx.serialization.json.JsonArray -> el.firstNotNullOfOrNull { findItemStruct(it, wantedId, depth + 1) }
             else -> null
         }
     }

@@ -22,5 +22,6 @@ The full text of the Apache License 2.0 is available at <https://www.apache.org/
 |---|---|---|
 | Google Gemini API | Only when the user configures their own API key | [Gemini API Terms](https://ai.google.dev/gemini-api/terms) |
 | TikTok and YouTube oEmbed endpoints | When importing links from these platforms | Respective platform terms |
+| tikwm.com public API | Fallback for TikTok links when TikTok's own endpoints fail; receives only the video link | [tikwm.com](https://www.tikwm.com) |
 
 RecepyBook is not affiliated with Instagram, TikTok, YouTube, Facebook, Pinterest or Google. All trademarks belong to their respective owners.

@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-10-15
+
 ### Fixed
 - TikTok import returned TikTok's generic home page preview ("TikTok | Make Your Day") instead of the video caption. Short-link expansion now stops at the video URL, generic previews are rejected, and two more caption sources are tried: the embed player page and the public tikwm.com API.
 
@@ -54,7 +56,8 @@ The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.
 - Backup and restore, including photos.
 - Optional AI parsing via Google Gemini with a user-supplied key.
 
-[Unreleased]: https://github.com/MrIsrak/RecepyBook/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/MrIsrak/RecepyBook/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/MrIsrak/RecepyBook/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/MrIsrak/RecepyBook/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/MrIsrak/RecepyBook/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/MrIsrak/RecepyBook/releases/tag/v1.0.0

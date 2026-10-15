@@ -15,18 +15,32 @@ data class Food(
     val pack: Double? = null,
 )
 
+/** Отделы магазина. Хранятся как стабильные ключи; подписи — в ресурсах интерфейса. */
 object Aisles {
-    const val VEG = "Овощи, фрукты, зелень"
-    const val MEAT = "Мясо и рыба"
-    const val DAIRY = "Молочное и яйца"
-    const val GROCERY = "Бакалея и крупы"
-    const val BAKERY = "Хлеб и выпечка"
-    const val SPICES = "Специи, соусы, масла"
-    const val NUTS = "Орехи и сухофрукты"
-    const val SWEETS = "Сладкое"
-    const val DRINKS = "Напитки"
-    const val OTHER = "Другое"
+    const val VEG = "veg"
+    const val MEAT = "meat"
+    const val DAIRY = "dairy"
+    const val GROCERY = "grocery"
+    const val BAKERY = "bakery"
+    const val SPICES = "spices"
+    const val NUTS = "nuts"
+    const val SWEETS = "sweets"
+    const val DRINKS = "drinks"
+    const val OTHER = "other"
     val order = listOf(VEG, MEAT, DAIRY, BAKERY, GROCERY, SPICES, NUTS, SWEETS, DRINKS, OTHER)
+
+    /** Версия 1.0 хранила русские названия — переводим их в ключи. */
+    private val legacy = mapOf(
+        "Овощи, фрукты, зелень" to VEG, "Мясо и рыба" to MEAT, "Молочное и яйца" to DAIRY,
+        "Бакалея и крупы" to GROCERY, "Хлеб и выпечка" to BAKERY, "Специи, соусы, масла" to SPICES,
+        "Орехи и сухофрукты" to NUTS, "Сладкое" to SWEETS, "Напитки" to DRINKS, "Другое" to OTHER,
+    )
+
+    fun normalize(v: String?): String = when {
+        v == null -> OTHER
+        v in order -> v
+        else -> legacy[v] ?: OTHER
+    }
 }
 
 data class NutritionResult(

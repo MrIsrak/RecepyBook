@@ -32,6 +32,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import app.receptnik.R
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -64,7 +66,7 @@ class EditViewModel(private val c: AppContainer, private val id: Long) : ViewMod
         editor.servings = d.servings.toString()
     }
 
-    fun save(onDone: (Long) -> Unit) = viewModelScope.launch {
+    fun save(untitled: String, onDone: (Long) -> Unit) = viewModelScope.launch {
         var draft = editor.toDraft()
         draft = c.links.withNutrition(draft)
         if (draft.nutrition == null && !editor.ingredientsChanged) {
@@ -72,14 +74,14 @@ class EditViewModel(private val c: AppContainer, private val id: Long) : ViewMod
         }
         val o = original
         if (o == null) {
-            val newId = c.repo.saveDraft(draft)
+            val newId = c.repo.saveDraft(draft, untitled)
             c.repo.getRecipe(newId)?.let { c.repo.update(it.copy(notes = editor.notes.trim())) }
             onDone(newId)
         } else {
             if (o.image != draft.imageUrl) c.images.delete(o.image)
             c.repo.update(
                 o.copy(
-                    title = draft.title.ifBlank { "Без названия" }, description = draft.description, image = draft.imageUrl,
+                    title = draft.title.ifBlank { untitled }, description = draft.description, image = draft.imageUrl,
                     servings = draft.servings, totalTimeMin = draft.totalTimeMin, ingredients = draft.ingredients,
                     steps = draft.steps, nutrition = draft.nutrition, nutritionNote = draft.nutritionNote,
                     tags = draft.tags, mealType = draft.mealType, cuisine = draft.cuisine, notes = editor.notes.trim(),
@@ -95,49 +97,46 @@ fun EditRecipeScreen(id: Long, nav: NavHostController) {
     val c = rememberContainer()
     val vm: EditViewModel = viewModel { EditViewModel(c, id) }
     var pasted by remember { mutableStateOf("") }
+    val untitled = stringResource(R.string.untitled)
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) vm.editor.image = uri.toString()
     }
 
     AppScaffold(
-        title = if (id == 0L) "Новый рецепт" else "Редактирование",
+        title = stringResource(if (id == 0L) R.string.new_recipe else R.string.editing),
         onBack = { nav.popBackStack() },
         actions = {
             IconButton(
                 enabled = vm.editor.title.isNotBlank(),
                 onClick = {
-                    vm.save { savedId ->
+                    vm.save(untitled) { savedId ->
                         if (id == 0L) nav.navigate(Routes.recipe(savedId)) { popUpTo("recipes") }
                         else nav.popBackStack()
                     }
                 },
-            ) { Icon(Icons.Outlined.Check, "Сохранить") }
+            ) { Icon(Icons.Outlined.Check, stringResource(R.string.save)) }
         },
     ) { mod ->
         if (!vm.loaded) return@AppScaffold
         Column(
-            mod.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).imePadding(),
+            mod.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).imePadding(),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Card(
-                shape = RoundedCornerShape(20.dp),
-                modifier = Modifier.fillMaxWidth().clickable {
+            RecipeImage(
+                vm.editor.image,
+                Modifier.fillMaxWidth().aspectRatio(16f / 10f).clip(RoundedCornerShape(24.dp)).clickable {
                     picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                 },
-            ) {
-                RecipeImage(vm.editor.image, Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(20.dp)))
-            }
-            Text(
-                "Нажми на картинку, чтобы выбрать фото",
-                style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Text(stringResource(R.string.tap_to_pick_photo), style = MaterialTheme.typography.bodySmall, color = muted)
             if (id == 0L) {
                 OutlinedTextField(
                     pasted, { pasted = it }, modifier = Modifier.fillMaxWidth(), minLines = 3,
-                    label = { Text("Вставь текст рецепта целиком (необязательно)") },
+                    label = { Text(stringResource(R.string.paste_whole_recipe)) },
+                    shape = RoundedCornerShape(18.dp), colors = softFieldColors(),
                 )
-                OutlinedButton(onClick = { vm.parsePasted(pasted) }, enabled = pasted.isNotBlank()) {
-                    Text("Разобрать текст по полям")
+                OutlinedButton(onClick = { vm.parsePasted(pasted) }, enabled = pasted.isNotBlank(), shape = androidx.compose.foundation.shape.CircleShape) {
+                    Text(stringResource(R.string.parse_into_fields))
                 }
             }
             RecipeEditorFields(vm.editor)

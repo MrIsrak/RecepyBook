@@ -31,11 +31,11 @@ class Repository(private val db: AppDatabase, private val images: ImageStore) {
     fun recipe(id: Long): Flow<Recipe?> = db.recipes().byId(id)
     suspend fun getRecipe(id: Long): Recipe? = db.recipes().get(id)
 
-    suspend fun saveDraft(d: RecipeDraft): Long {
+    suspend fun saveDraft(d: RecipeDraft, untitled: String = "Recipe"): Long {
         val image = images.persist(d.imageUrl)
         return db.recipes().insert(
             Recipe(
-                title = d.title.ifBlank { "Без названия" },
+                title = d.title.ifBlank { untitled },
                 description = d.description,
                 image = image,
                 sourceUrl = d.sourceUrl,
@@ -100,7 +100,7 @@ class Repository(private val db: AppDatabase, private val images: ImageStore) {
     /** Добавляет ингредиенты рецепта; одинаковые продукты с одной единицей складываются. */
     suspend fun addRecipeToGrocery(recipe: Recipe, servings: Int = recipe.servings) {
         val factor = if (recipe.servings > 0) servings.toDouble() / recipe.servings else 1.0
-        val existing = db.grocery().allOnce().filter { !it.checked }.toMutableList()
+        val existing = db.grocery().allOnce().filter { !it.checked }.map { it.copy(aisle = Aisles.normalize(it.aisle)) }.toMutableList()
         val toInsert = mutableListOf<GroceryItem>()
         for (ing in recipe.ingredients) {
             if (ing.isHeader) continue

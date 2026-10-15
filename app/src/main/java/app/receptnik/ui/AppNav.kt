@@ -1,6 +1,7 @@
 package app.receptnik.ui
 
 import android.net.Uri
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
@@ -10,12 +11,16 @@ import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import app.receptnik.R
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -28,13 +33,13 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import app.receptnik.Shared
 
-private data class Tab(val route: String, val title: String, val icon: ImageVector)
+private data class Tab(val route: String, val title: Int, val icon: ImageVector)
 
 private val tabs = listOf(
-    Tab("recipes", "Рецепты", Icons.Outlined.RestaurantMenu),
-    Tab("plan", "План", Icons.Outlined.CalendarMonth),
-    Tab("grocery", "Покупки", Icons.Outlined.ShoppingCart),
-    Tab("cookbooks", "Книги", Icons.AutoMirrored.Outlined.MenuBook),
+    Tab("recipes", R.string.tab_recipes, Icons.Outlined.RestaurantMenu),
+    Tab("plan", R.string.tab_plan, Icons.Outlined.CalendarMonth),
+    Tab("grocery", R.string.tab_grocery, Icons.Outlined.ShoppingCart),
+    Tab("cookbooks", R.string.tab_cookbooks, Icons.AutoMirrored.Outlined.MenuBook),
 )
 
 object Routes {
@@ -65,15 +70,26 @@ fun AppNav(shared: Shared?, onSharedConsumed: () -> Unit) {
     val showBar = tabs.any { it.route == route }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            if (showBar) NavigationBar {
-                tabs.forEach { t ->
-                    NavigationBarItem(
-                        selected = route == t.route,
-                        onClick = { nav.switchTab(t.route) },
-                        icon = { Icon(t.icon, contentDescription = null) },
-                        label = { Text(t.title) },
-                    )
+            if (showBar) Column {
+                Hairline()
+                NavigationBar(containerColor = MaterialTheme.colorScheme.background, tonalElevation = 0.dp) {
+                    tabs.forEach { t ->
+                        NavigationBarItem(
+                            selected = route == t.route,
+                            onClick = { nav.switchTab(t.route) },
+                            icon = { Icon(t.icon, contentDescription = null) },
+                            label = { Text(stringResource(t.title), style = MaterialTheme.typography.labelMedium) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.onSurface,
+                                selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                                indicatorColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                unselectedIconColor = muted,
+                                unselectedTextColor = muted,
+                            ),
+                        )
+                    }
                 }
             }
         },

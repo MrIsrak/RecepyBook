@@ -62,8 +62,8 @@ data class Cookbook(
 )
 data class RecipeCookbook(val recipeId: Long, val cookbookId: Long)
 
-enum class MealSlot(val title: String) {
-    BREAKFAST("Завтрак"), LUNCH("Обед"), DINNER("Ужин"), SNACK("Перекус")
+enum class MealSlot {
+    BREAKFAST, LUNCH, DINNER, SNACK
 }
 
 @Serializable

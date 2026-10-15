@@ -25,21 +25,20 @@ class PhotoImporter(private val context: Context, private val gemini: () -> Gemi
     suspend fun import(uri: Uri): ImportResult {
         val jpeg = withContext(Dispatchers.IO) { loadScaledJpeg(uri) }
         val ai = gemini()
-        val warnings = mutableListOf<String>()
+        val warnings = mutableListOf<ImportWarning>()
+        var aiError: String? = null
         if (ai != null) {
             val d = runCatching { ai.extract(null, jpeg, "image/jpeg") }
-                .onFailure { warnings += it.message ?: "Ошибка ИИ" }
+                .onFailure { aiError = it.message ?: "Gemini error" }
                 .getOrNull()
-            if (d != null) return ImportResult(links.withNutrition(d.copy(imageUrl = uri.toString())), warnings)
+            if (d != null) return ImportResult(links.withNutrition(d.copy(imageUrl = uri.toString())))
         }
         val text = recognize(uri)
         val draft = CaptionParser.parse(text)
         if (draft.ingredients.isEmpty()) {
-            warnings += if (ai == null)
-                "Не удалось разобрать текст на фото. Встроенное распознавание понимает только латиницу — для русского и иврита добавь бесплатный ключ Gemini в настройках."
-            else "На фото не нашлось рецепта."
+            warnings += if (ai == null) ImportWarning.PHOTO_UNREADABLE else ImportWarning.PHOTO_NO_RECIPE
         }
-        return ImportResult(links.withNutrition(draft.copy(imageUrl = uri.toString())), warnings)
+        return ImportResult(links.withNutrition(draft.copy(imageUrl = uri.toString())), warnings, aiError)
     }
 
     private suspend fun recognize(uri: Uri): String = suspendCancellableCoroutine { cont ->
@@ -63,7 +62,7 @@ class PhotoImporter(private val context: Context, private val gemini: () -> Gemi
         while (maxOf(bounds.outWidth, bounds.outHeight) / sample > 2000) sample *= 2
         val opts = BitmapFactory.Options().apply { inSampleSize = sample }
         val bmp: Bitmap = context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, opts) }
-            ?: throw IllegalArgumentException("Не удалось открыть картинку")
+            ?: throw IllegalArgumentException("Cannot open image")
         val out = ByteArrayOutputStream()
         bmp.compress(Bitmap.CompressFormat.JPEG, 85, out)
         bmp.recycle()

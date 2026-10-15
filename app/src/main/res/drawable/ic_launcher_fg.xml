@@ -1,32 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Кастрюля с паром: оригинальная иконка -->
+<!-- Минималистичная иконка: миска и одна капля-акцент -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- корпус -->
+    <!-- миска -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M32,52 L76,52 L73,74 Q72,78 68,78 L40,78 Q36,78 35,74 Z" />
-    <!-- крышка -->
+        android:pathData="M32,52 L76,52 A22,22 0 0,1 54,74 A22,22 0 0,1 32,52 Z" />
+    <!-- подставка -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M28,46 L80,46 Q82,46 82,48 L82,49 Q82,50 80,50 L28,50 Q26,50 26,49 L26,48 Q26,46 28,46 Z" />
+        android:pathData="M45,76 L63,76 Q65,76 65,78 L65,79 Q65,80 63,80 L45,80 Q43,80 43,79 L43,78 Q43,76 45,76 Z" />
+    <!-- акцент -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M50,40 L58,40 Q60,40 60,42 L60,45 L48,45 L48,42 Q48,40 50,40 Z" />
-    <!-- пар -->
-    <path
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="3"
-        android:strokeLineCap="round"
-        android:fillColor="#00000000"
-        android:pathData="M44,34 Q41,30 44,26 Q47,22 44,18" />
-    <path
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="3"
-        android:strokeLineCap="round"
-        android:fillColor="#00000000"
-        android:pathData="M64,34 Q61,30 64,26 Q67,22 64,18" />
+        android:fillColor="@color/ic_accent"
+        android:pathData="M54,32 m-7,0 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0" />
 </vector>

@@ -1,10 +1,15 @@
 package app.receptnik.ui
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -13,42 +18,39 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AddShoppingCart
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.icons.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.Remove
-import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Share
-import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -66,12 +68,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import app.receptnik.R
 import app.receptnik.core.QtyFormat
 import app.receptnik.core.UnitSystem
 import app.receptnik.data.MealSlot
@@ -79,8 +84,6 @@ import app.receptnik.data.Recipe
 import kotlinx.coroutines.launch
 import java.net.URI
 import java.time.LocalDate
-import java.time.format.TextStyle
-import java.util.Locale
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -89,13 +92,11 @@ fun RecipeDetailScreen(id: Long, nav: NavHostController) {
     val c = rememberContainer()
     val recipe by c.repo.recipe(id).collectAsState(initial = null)
     val settings by c.settings.collectAsState()
-    val r = recipe ?: run {
-        AppScaffold(title = "", onBack = { nav.popBackStack() }) {}
-        return
-    }
+    val r = recipe ?: run { AppScaffold(title = "", onBack = { nav.popBackStack() }) {}; return }
     val scope = rememberCoroutineScope()
     val ctx = LocalContext.current
     val uri = LocalUriHandler.current
+    val lang = uiLang()
     val snackbar = remember { SnackbarHostState() }
 
     var servings by rememberSaveable(r.id) { mutableIntStateOf(r.servings) }
@@ -107,188 +108,195 @@ fun RecipeDetailScreen(id: Long, nav: NavHostController) {
     var bookDialog by remember { mutableStateOf(false) }
     val factor = if (r.servings > 0) servings.toDouble() / r.servings else 1.0
 
-    AppScaffold(
-        title = "",
-        onBack = { nav.popBackStack() },
-        snackbar = snackbar,
-        actions = {
-            IconButton(onClick = { scope.launch { c.repo.toggleFavorite(r) } }) {
-                if (r.favorite) Icon(Icons.Filled.Favorite, "Убрать из избранного", tint = MaterialTheme.colorScheme.primary)
-                else Icon(Icons.Outlined.FavoriteBorder, "В избранное")
-            }
-            IconButton(onClick = { shareText(ctx, recipeAsText(r, factor, units), r.title) }) { Icon(Icons.Outlined.Share, "Поделиться") }
-            IconButton(onClick = { menu = true }) { Icon(Icons.Outlined.MoreVert, "Ещё") }
-            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                DropdownMenuItem(
-                    text = { Text("Редактировать") }, leadingIcon = { Icon(Icons.Outlined.Edit, null) },
-                    onClick = { menu = false; nav.navigate(Routes.edit(r.id)) },
-                )
-                DropdownMenuItem(
-                    text = { Text("В кулинарную книгу") }, leadingIcon = { Icon(Icons.AutoMirrored.Outlined.MenuBook, null) },
-                    onClick = { menu = false; bookDialog = true },
-                )
-                DropdownMenuItem(
-                    text = { Text("Удалить") }, leadingIcon = { Icon(Icons.Outlined.Delete, null) },
-                    onClick = { menu = false; confirmDelete = true },
-                )
-            }
-        },
-    ) { mod ->
-        LazyColumn(mod.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 32.dp)) {
+    val msgAddedGrocery = stringResource(R.string.added_to_grocery)
+    val shareTitle = stringResource(R.string.share)
+
+    Scaffold(containerColor = MaterialTheme.colorScheme.background, snackbarHost = { SnackbarHost(snackbar) }) { pad ->
+        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = pad.calculateBottomPadding() + 40.dp)) {
+            // ── Обложка с кнопками поверх ──
             item {
-                RecipeImage(
-                    r.image,
-                    Modifier.padding(horizontal = 16.dp).fillMaxWidth().aspectRatio(4f / 3f).clip(RoundedCornerShape(24.dp)),
-                )
-            }
-            item {
-                Column(Modifier.padding(16.dp)) {
-                    Text(r.title, style = MaterialTheme.typography.headlineSmall)
-                    r.sourceUrl?.let { src ->
-                        val host = runCatching { URI(src).host?.removePrefix("www.") }.getOrNull() ?: src
-                        Row(
-                            Modifier.padding(top = 6.dp).clip(RoundedCornerShape(8.dp)).clickable { runCatching { uri.openUri(src) } },
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                listOfNotNull(r.author, host).joinToString(" · "),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                            Icon(Icons.Outlined.OpenInNew, null, Modifier.padding(start = 4.dp).size(14.dp), tint = MaterialTheme.colorScheme.primary)
-                        }
-                    }
-                    if (r.description.isNotBlank()) {
-                        Text(r.description, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 8.dp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
-                        formatMinutes(r.totalTimeMin)?.let { AssistChip(onClick = {}, label = { Text(it) }, leadingIcon = { Icon(Icons.Outlined.Timer, null, Modifier.size(16.dp)) }) }
-                        r.kcalPerServing()?.let { AssistChip(onClick = {}, label = { Text("$it ккал / порция") }) }
-                        r.cuisine?.takeIf { it.isNotBlank() }?.let { AssistChip(onClick = {}, label = { Text(it) }) }
-                        r.mealType?.takeIf { it.isNotBlank() }?.let { AssistChip(onClick = {}, label = { Text(it) }) }
-                    }
-                    Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = { nav.navigate(Routes.cook(r.id)) }, modifier = Modifier.weight(1f)) {
-                            Icon(Icons.Filled.PlayArrow, null); Spacer(Modifier.width(6.dp)); Text("Готовить")
-                        }
-                        FilledTonalButton(onClick = { planDialog = true }) {
-                            Icon(Icons.Outlined.CalendarMonth, null); Spacer(Modifier.width(6.dp)); Text("В план")
+                Box {
+                    RecipeImage(
+                        r.image,
+                        Modifier.fillMaxWidth().aspectRatio(1f)
+                            .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)),
+                    )
+                    Row(
+                        Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        GlassIconButton(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.back), { nav.popBackStack() })
+                        Spacer(Modifier.weight(1f))
+                        GlassIconButton(
+                            if (r.favorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                            stringResource(R.string.favorite),
+                            { scope.launch { c.repo.toggleFavorite(r) } },
+                            tint = if (r.favorite) Accent else null,
+                        )
+                        GlassIconButton(Icons.Outlined.Share, shareTitle, {
+                            shareText(ctx, recipeAsText(ctx.resources, r, factor, units, lang), shareTitle)
+                        })
+                        Box {
+                            GlassIconButton(Icons.Outlined.MoreVert, stringResource(R.string.more), { menu = true })
+                            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.edit)) }, leadingIcon = { Icon(Icons.Outlined.Edit, null) },
+                                    onClick = { menu = false; nav.navigate(Routes.edit(r.id)) },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.to_cookbook)) },
+                                    leadingIcon = { Icon(Icons.AutoMirrored.Outlined.MenuBook, null) },
+                                    onClick = { menu = false; bookDialog = true },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.delete)) }, leadingIcon = { Icon(Icons.Outlined.Delete, null) },
+                                    onClick = { menu = false; confirmDelete = true },
+                                )
+                            }
                         }
                     }
                 }
             }
 
-            // ---- Ингредиенты ----
+            // ── Заголовок ──
             item {
-                Column(Modifier.padding(horizontal = 16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Ингредиенты", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-                        FilledTonalIconButton(onClick = { if (servings > 1) servings-- }) { Icon(Icons.Outlined.Remove, "Меньше") }
+                Column(Modifier.padding(start = 24.dp, end = 24.dp, top = 24.dp)) {
+                    r.sourceUrl?.let { src ->
+                        val host = runCatching { URI(src).host?.removePrefix("www.") }.getOrNull() ?: src
                         Text(
-                            "$servings порц.", style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(horizontal = 8.dp),
+                            listOfNotNull(r.author, host).joinToString(" · ").uppercase(),
+                            style = MaterialTheme.typography.labelSmall, color = muted,
+                            modifier = Modifier.clip(RoundedCornerShape(6.dp)).clickable { runCatching { uri.openUri(src) } }
+                                .padding(vertical = 4.dp),
                         )
-                        FilledTonalIconButton(onClick = { servings++ }) { Icon(Icons.Outlined.Add, "Больше") }
+                        Spacer(Modifier.height(6.dp))
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 4.dp)) {
-                        listOf(UnitSystem.ORIGINAL to "Как в рецепте", UnitSystem.METRIC to "Граммы/мл", UnitSystem.US to "US").forEach { (u, t) ->
-                            FilterChip(selected = units == u, onClick = { units = u }, label = { Text(t) })
+                    Text(r.title, style = MaterialTheme.typography.headlineLarge)
+                    val meta = listOfNotNull(
+                        minutesText(r.totalTimeMin),
+                        r.kcalPerServing()?.let { stringResource(R.string.kcal_per_serving, it) },
+                        r.cuisine?.takeIf { it.isNotBlank() },
+                    ).joinToString("  ·  ")
+                    if (meta.isNotEmpty()) Text(meta, style = MaterialTheme.typography.bodyMedium, color = muted, modifier = Modifier.padding(top = 8.dp))
+                    if (r.description.isNotBlank()) {
+                        Text(r.description, style = MaterialTheme.typography.bodyLarge, color = muted, modifier = Modifier.padding(top = 14.dp))
+                    }
+                    Row(Modifier.padding(top = 22.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Button(
+                            onClick = { nav.navigate(Routes.cook(r.id)) },
+                            modifier = Modifier.weight(1f).height(52.dp), shape = CircleShape,
+                        ) { Text(stringResource(R.string.start_cooking)) }
+                        OutlinedButton(
+                            onClick = { planDialog = true }, modifier = Modifier.height(52.dp), shape = CircleShape,
+                            border = BorderStroke(1.dp, hairline),
+                        ) {
+                            Icon(Icons.Outlined.CalendarMonth, null, Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.to_plan))
                         }
+                    }
+                }
+            }
+
+            // ── Ингредиенты ──
+            item {
+                Column(Modifier.padding(start = 24.dp, end = 24.dp, top = 36.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(R.string.ingredients), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
+                        Stepper(
+                            value = pluralStringResource(R.plurals.servings_count, servings, servings),
+                            onMinus = { if (servings > 1) servings-- }, onPlus = { servings++ },
+                        )
+                    }
+                    Row(Modifier.padding(top = 14.dp, bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(
+                            UnitSystem.ORIGINAL to R.string.units_original,
+                            UnitSystem.METRIC to R.string.units_metric,
+                            UnitSystem.US to R.string.units_us,
+                        ).forEach { (u, t) -> Pill(stringResource(t), selected = units == u, onClick = { units = u }) }
                     }
                 }
             }
             itemsIndexed(r.ingredients) { i, ing ->
                 if (ing.isHeader) {
-                    Text(
-                        ing.original, style = MaterialTheme.typography.titleSmall,
-                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp),
-                        color = MaterialTheme.colorScheme.primary,
-                    )
+                    SectionLabel(ing.original, Modifier.padding(start = 24.dp, end = 24.dp, top = 20.dp, bottom = 4.dp))
                 } else {
                     val done = i in checked
-                    Row(
-                        Modifier.fillMaxWidth().clickable { if (done) checked.remove(i) else checked.add(i) }
-                            .padding(horizontal = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Checkbox(checked = done, onCheckedChange = { if (done) checked.remove(i) else checked.add(i) })
-                        val amount = QtyFormat.formatAmount(ing, factor, units)
-                        Text(
-                            QtyFormat.displayName(ing),
-                            modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.bodyLarge,
-                            textDecoration = if (done) TextDecoration.LineThrough else null,
-                            color = if (done) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface,
-                        )
-                        if (amount.isNotBlank()) Text(
-                            amount, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(start = 8.dp, end = 8.dp),
-                            color = if (done) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface,
-                        )
+                    val color = if (done) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface
+                    Column(Modifier.padding(horizontal = 24.dp)) {
+                        Row(
+                            Modifier.fillMaxWidth().clickable { if (done) checked.remove(i) else checked.add(i) }.padding(vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            CheckDot(done)
+                            Spacer(Modifier.width(14.dp))
+                            Text(
+                                QtyFormat.displayName(ing), modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.bodyLarge, color = color,
+                                textDecoration = if (done) TextDecoration.LineThrough else null,
+                            )
+                            val amount = QtyFormat.formatAmount(ing, factor, units, lang)
+                            if (amount.isNotBlank()) Text(
+                                amount, style = MaterialTheme.typography.bodyLarge, color = if (done) color else muted,
+                                modifier = Modifier.padding(start = 12.dp).widthIn(max = 160.dp),
+                            )
+                        }
+                        Hairline()
                     }
                 }
             }
             item {
-                OutlinedButton(
-                    onClick = {
-                        scope.launch {
-                            c.repo.addRecipeToGrocery(r, servings)
-                            snackbar.showSnackbar("Добавлено в список покупок")
-                        }
-                    },
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth(),
+                TextButton(
+                    onClick = { scope.launch { c.repo.addRecipeToGrocery(r, servings); snackbar.showSnackbar(msgAddedGrocery) } },
+                    modifier = Modifier.padding(start = 12.dp, top = 8.dp),
                 ) {
-                    Icon(Icons.Outlined.AddShoppingCart, null); Spacer(Modifier.width(8.dp)); Text("В список покупок")
+                    Icon(Icons.Outlined.AddShoppingCart, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.add_to_grocery))
                 }
             }
 
-            // ---- Пищевая ценность ----
+            // ── Пищевая ценность ──
             r.nutrition?.takeIf { it.kcal > 0 }?.let { n ->
                 item {
                     val per = n / r.servings.coerceAtLeast(1).toDouble()
-                    Card(
-                        Modifier.padding(16.dp).fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-                    ) {
-                        Column(Modifier.padding(16.dp)) {
-                            Text("На одну порцию", style = MaterialTheme.typography.titleMedium)
-                            Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                                NutrientCell("${per.kcal.roundToInt()}", "ккал")
-                                NutrientCell("${per.protein.roundToInt()} г", "белки")
-                                NutrientCell("${per.fat.roundToInt()} г", "жиры")
-                                NutrientCell("${per.carbs.roundToInt()} г", "углеводы")
-                            }
-                            Text(
-                                (r.nutritionNote ?: "Примерная оценка") + " · всего ${n.kcal.roundToInt()} ккал",
-                                style = MaterialTheme.typography.labelSmall,
-                                modifier = Modifier.padding(top = 10.dp),
-                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
-                            )
+                    Column(Modifier.padding(start = 24.dp, end = 24.dp, top = 28.dp)) {
+                        SectionLabel(stringResource(R.string.per_serving))
+                        Spacer(Modifier.height(14.dp))
+                        Row(Modifier.fillMaxWidth()) {
+                            Nutrient("${per.kcal.roundToInt()}", stringResource(R.string.kcal), Modifier.weight(1f), accent = true)
+                            Nutrient("${per.protein.roundToInt()}", stringResource(R.string.protein_g), Modifier.weight(1f))
+                            Nutrient("${per.fat.roundToInt()}", stringResource(R.string.fat_g), Modifier.weight(1f))
+                            Nutrient("${per.carbs.roundToInt()}", stringResource(R.string.carbs_g), Modifier.weight(1f))
                         }
+                        Text(
+                            nutritionNoteText(r.nutritionNote) + " · " + stringResource(R.string.kcal_total, n.kcal.roundToInt()),
+                            style = MaterialTheme.typography.bodySmall, color = muted, modifier = Modifier.padding(top = 12.dp),
+                        )
                     }
                 }
             }
 
-            // ---- Шаги ----
+            // ── Шаги ──
             if (r.steps.isNotEmpty()) {
                 item {
-                    Text("Приготовление", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp))
+                    Text(
+                        stringResource(R.string.method), style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 40.dp, bottom = 8.dp),
+                    )
                 }
                 var n = 0
                 val numbered = r.steps.map { s -> if (s.endsWith(":")) null to s else (++n) to s }
                 itemsIndexed(numbered) { _, (num, text) ->
                     if (num == null) {
-                        Text(text, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                        SectionLabel(text, Modifier.padding(start = 24.dp, end = 24.dp, top = 16.dp))
                     } else {
-                        Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp)) {
-                                androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center) {
-                                    Text("$num", color = MaterialTheme.colorScheme.onPrimary, style = MaterialTheme.typography.labelLarge)
-                                }
-                            }
-                            Text(text, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(start = 12.dp).weight(1f))
+                        Row(Modifier.padding(horizontal = 24.dp, vertical = 12.dp)) {
+                            Text(
+                                num.toString().padStart(2, '0'), style = MaterialTheme.typography.titleLarge, color = Accent,
+                                modifier = Modifier.width(40.dp),
+                            )
+                            Text(text, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                         }
                     }
                 }
@@ -296,46 +304,45 @@ fun RecipeDetailScreen(id: Long, nav: NavHostController) {
 
             if (r.notes.isNotBlank()) {
                 item {
-                    HorizontalDivider(Modifier.padding(16.dp))
-                    Text("Мои заметки", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 16.dp))
-                    Text(r.notes, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(16.dp))
+                    Column(Modifier.padding(start = 24.dp, end = 24.dp, top = 32.dp)) {
+                        SectionLabel(stringResource(R.string.my_notes))
+                        Text(r.notes, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
+                    }
                 }
             }
             if (r.tags.isNotEmpty()) {
                 item {
-                    FlowRow(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        r.tags.forEach { t -> AssistChip(onClick = {}, label = { Text("#$t") }) }
-                    }
+                    FlowRow(
+                        Modifier.padding(start = 24.dp, end = 24.dp, top = 28.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) { r.tags.forEach { t -> Text("#$t", style = MaterialTheme.typography.labelLarge, color = muted) } }
                 }
             }
-            item { Spacer(Modifier.height(24.dp)) }
         }
     }
 
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("Удалить рецепт?") },
-            text = { Text("«${r.title}» будет удалён вместе с записями в плане.") },
+            containerColor = MaterialTheme.colorScheme.background,
+            title = { Text(stringResource(R.string.delete_recipe_q)) },
+            text = { Text(stringResource(R.string.delete_recipe_text, r.title)) },
             confirmButton = {
-                TextButton(onClick = {
-                    confirmDelete = false
-                    scope.launch { c.repo.delete(r); nav.popBackStack() }
-                }) { Text("Удалить") }
+                TextButton(onClick = { confirmDelete = false; scope.launch { c.repo.delete(r); nav.popBackStack() } }) {
+                    Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
+                }
             },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Отмена") } },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
     if (planDialog) {
+        val addedTpl = stringResource(R.string.added_to_plan)
+        val res = ctx.resources
         AddToPlanDialog(
-            recipe = r, initialServings = servings,
-            onDismiss = { planDialog = false },
-            onAdd = { day, slot, s ->
+            recipe = r, initialServings = servings, onDismiss = { planDialog = false },
+            onAdd = { day, slot, s, slotName, dayName ->
                 planDialog = false
-                scope.launch {
-                    c.repo.addToPlan(r, day, slot, s)
-                    snackbar.showSnackbar("Добавлено в план: ${slot.title.lowercase()}, ${dayLabel(day)}")
-                }
+                scope.launch { c.repo.addToPlan(r, day, slot, s); snackbar.showSnackbar(String.format(addedTpl, slotName, dayName)) }
             },
         )
     }
@@ -343,84 +350,89 @@ fun RecipeDetailScreen(id: Long, nav: NavHostController) {
 }
 
 @Composable
-private fun NutrientCell(value: String, label: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, style = MaterialTheme.typography.titleMedium)
-        Text(label, style = MaterialTheme.typography.labelSmall)
+private fun Nutrient(value: String, label: String, modifier: Modifier, accent: Boolean = false) {
+    Column(modifier) {
+        Text(value, style = MaterialTheme.typography.headlineMedium, color = if (accent) Accent else MaterialTheme.colorScheme.onSurface)
+        Text(label, style = MaterialTheme.typography.bodySmall, color = muted)
     }
 }
 
-fun dayLabel(epochDay: Long): String {
-    val d = LocalDate.ofEpochDay(epochDay)
-    val today = LocalDate.now()
-    return when (d) {
-        today -> "сегодня"
-        today.plusDays(1) -> "завтра"
-        else -> d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale("ru")) + ", " + d.dayOfMonth + " " +
-            monthGenitive(d.monthValue)
+/** Отметка «уже положил»: пустой кружок → залитый с галочкой. */
+@Composable
+fun CheckDot(done: Boolean) {
+    val cs = MaterialTheme.colorScheme
+    Box(
+        Modifier.size(22.dp).clip(CircleShape)
+            .background(if (done) cs.primary else cs.background)
+            .border(1.5.dp, if (done) cs.primary else cs.outline, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) { if (done) Icon(Icons.Filled.Check, null, tint = cs.onPrimary, modifier = Modifier.size(14.dp)) }
+}
+
+@Composable
+fun Stepper(value: String, onMinus: () -> Unit, onPlus: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        RoundIcon(Icons.Outlined.Remove, onMinus)
+        Text(value, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(horizontal = 10.dp))
+        RoundIcon(Icons.Outlined.Add, onPlus)
     }
 }
 
-fun monthGenitive(m: Int) = listOf(
-    "января", "февраля", "марта", "апреля", "мая", "июня",
-    "июля", "августа", "сентября", "октября", "ноября", "декабря",
-)[m - 1]
+@Composable
+private fun RoundIcon(icon: ImageVector, onClick: () -> Unit) {
+    Surface(onClick = onClick, shape = CircleShape, border = BorderStroke(1.dp, hairline), color = MaterialTheme.colorScheme.background,
+        modifier = Modifier.size(34.dp)) {
+        Box(contentAlignment = Alignment.Center) { Icon(icon, null, Modifier.size(16.dp)) }
+    }
+}
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun AddToPlanDialog(recipe: Recipe, initialServings: Int, onDismiss: () -> Unit, onAdd: (Long, MealSlot, Int) -> Unit) {
+fun AddToPlanDialog(
+    recipe: Recipe,
+    initialServings: Int,
+    onDismiss: () -> Unit,
+    onAdd: (day: Long, slot: MealSlot, servings: Int, slotName: String, dayName: String) -> Unit,
+) {
     val today = LocalDate.now().toEpochDay()
     var day by remember { mutableStateOf(today) }
     var slot by remember { mutableStateOf(guessSlot(recipe.mealType)) }
     var servings by remember { mutableIntStateOf(initialServings) }
+    val slotName = slotLabel(slot)
+    val dayName = dayTitle(day)
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Добавить в план") },
+        containerColor = MaterialTheme.colorScheme.background,
+        title = { Text(stringResource(R.string.add_to_plan)) },
         text = {
             Column {
-                Text("День", style = MaterialTheme.typography.labelLarge)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    (0L..6L).forEach { off ->
-                        val d = today + off
-                        FilterChip(selected = day == d, onClick = { day = d }, label = { Text(shortDay(d)) })
-                    }
+                SectionLabel(stringResource(R.string.day))
+                FlowRow(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    (0L..6L).forEach { off -> val d = today + off; Pill(dayTitle(d), selected = day == d, onClick = { day = d }) }
                 }
-                Spacer(Modifier.height(8.dp))
-                Text("Приём пищи", style = MaterialTheme.typography.labelLarge)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    MealSlot.entries.forEach { s ->
-                        FilterChip(selected = slot == s, onClick = { slot = s }, label = { Text(s.title) })
-                    }
+                Spacer(Modifier.height(16.dp))
+                SectionLabel(stringResource(R.string.meal))
+                FlowRow(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    MealSlot.entries.forEach { s -> Pill(slotLabel(s), selected = slot == s, onClick = { slot = s }) }
                 }
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(16.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Порций", style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
-                    FilledTonalIconButton(onClick = { if (servings > 1) servings-- }) { Icon(Icons.Outlined.Remove, null) }
-                    Text("$servings", modifier = Modifier.padding(horizontal = 12.dp), style = MaterialTheme.typography.titleMedium)
-                    FilledTonalIconButton(onClick = { servings++ }) { Icon(Icons.Outlined.Add, null) }
+                    SectionLabel(stringResource(R.string.servings), Modifier.weight(1f))
+                    Stepper(servings.toString(), onMinus = { if (servings > 1) servings-- }, onPlus = { servings++ })
                 }
             }
         },
-        confirmButton = { TextButton(onClick = { onAdd(day, slot, servings) }) { Text("Добавить") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } },
+        confirmButton = { TextButton(onClick = { onAdd(day, slot, servings, slotName.lowercase(), dayName.lowercase()) }) { Text(stringResource(R.string.add)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
-}
-
-fun shortDay(epochDay: Long): String {
-    val d = LocalDate.ofEpochDay(epochDay)
-    return when (d) {
-        LocalDate.now() -> "Сегодня"
-        LocalDate.now().plusDays(1) -> "Завтра"
-        else -> d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale("ru")).replaceFirstChar { it.uppercaseChar() } + " " + d.dayOfMonth
-    }
 }
 
 fun guessSlot(mealType: String?): MealSlot {
     val t = mealType?.lowercase() ?: return MealSlot.DINNER
     return when {
-        "завтрак" in t || "breakfast" in t || "brunch" in t -> MealSlot.BREAKFAST
-        "обед" in t || "lunch" in t || "суп" in t -> MealSlot.LUNCH
-        "перекус" in t || "десерт" in t || "snack" in t || "dessert" in t || "выпечк" in t -> MealSlot.SNACK
+        listOf("завтрак", "breakfast", "brunch", "בוקר").any { it in t } -> MealSlot.BREAKFAST
+        listOf("обед", "lunch", "суп", "soup", "צהריים", "מרק").any { it in t } -> MealSlot.LUNCH
+        listOf("перекус", "десерт", "выпечк", "snack", "dessert", "קינוח", "נשנוש", "חטיף").any { it in t } -> MealSlot.SNACK
         else -> MealSlot.DINNER
     }
 }
@@ -434,25 +446,27 @@ fun CookbookPickDialog(recipe: Recipe, onDismiss: () -> Unit) {
     var newName by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Кулинарные книги") },
+        containerColor = MaterialTheme.colorScheme.background,
+        title = { Text(stringResource(R.string.cookbooks)) },
         text = {
             Column {
-                if (books.isEmpty()) Text("Книг пока нет — создай первую:", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (books.isEmpty()) Text(stringResource(R.string.no_books_create_first), color = muted)
                 books.forEach { b ->
                     val inBook = links.any { it.recipeId == recipe.id && it.cookbookId == b.id }
                     Row(
-                        Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
                             .clickable { scope.launch { c.repo.setInCookbook(recipe.id, b.id, !inBook) } },
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Checkbox(checked = inBook, onCheckedChange = { scope.launch { c.repo.setInCookbook(recipe.id, b.id, it) } })
-                        Text("${b.emoji} ${b.name}")
+                        Text("${b.emoji}  ${b.name}")
                     }
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    androidx.compose.material3.OutlinedTextField(
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
+                    OutlinedTextField(
                         value = newName, onValueChange = { newName = it },
-                        placeholder = { Text("Новая книга") }, singleLine = true, modifier = Modifier.weight(1f),
+                        placeholder = { Text(stringResource(R.string.new_cookbook)) }, singleLine = true,
+                        shape = CircleShape, colors = softFieldColors(), modifier = Modifier.weight(1f),
                     )
                     IconButton(onClick = {
                         val name = newName.trim()
@@ -461,10 +475,10 @@ fun CookbookPickDialog(recipe: Recipe, onDismiss: () -> Unit) {
                             c.repo.setInCookbook(recipe.id, id, true)
                             newName = ""
                         }
-                    }) { Icon(Icons.Outlined.Add, "Создать") }
+                    }) { Icon(Icons.Outlined.Add, stringResource(R.string.create)) }
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Готово") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.done)) } },
     )
 }

@@ -14,7 +14,23 @@ import org.jsoup.nodes.TextNode
 import java.net.URI
 import java.net.URLEncoder
 
-data class ImportResult(val draft: RecipeDraft, val warnings: List<String> = emptyList())
+/** Предупреждения импорта; тексты — в ресурсах интерфейса. */
+enum class ImportWarning { NO_INGREDIENTS, NO_INGREDIENTS_WITH_AI, PHOTO_UNREADABLE, PHOTO_NO_RECIPE }
+
+/** Коды пометки о происхождении КБЖУ (сохраняются в рецепте). */
+object NutritionNote {
+    const val SITE = "site"
+    const val AI = "ai"
+    const val ALL = "calc:all"
+    fun partial(matched: Int, total: Int) = "calc:$matched/$total"
+}
+
+data class ImportResult(
+    val draft: RecipeDraft,
+    val warnings: List<ImportWarning> = emptyList(),
+    /** Текст ошибки Gemini, если ИИ не сработал (показывается как есть). */
+    val aiError: String? = null,
+)
 
 /** Что удалось вытащить со страницы до разбора на рецепт. */
 private data class Source(
@@ -44,15 +60,25 @@ class LinkImporter(private val gemini: () -> GeminiClient?) {
     }
 
     suspend fun import(input: String): ImportResult {
-        val url = TextUtil.firstUrl(input) ?: throw IllegalArgumentException("В тексте нет ссылки")
-        val warnings = mutableListOf<String>()
-        val src = when (platformOf(url)) {
-            Platform.TIKTOK -> tiktok(url)
-            Platform.INSTAGRAM -> instagram(url)
-            Platform.YOUTUBE -> youtube(url)
-            Platform.FACEBOOK -> ogPage(url, Http.UA_BOT)
-            Platform.PINTEREST -> pinterest(url)
-            Platform.WEB -> web(url)
+        val url = TextUtil.firstUrl(input) ?: throw ImportException(ImportException.Reason.NO_LINK)
+        val warnings = mutableListOf<ImportWarning>()
+        var aiError: String? = null
+        val platform = platformOf(url)
+        val src = try {
+            when (platform) {
+                Platform.TIKTOK -> tiktok(url)
+                Platform.INSTAGRAM -> instagram(url)
+                Platform.YOUTUBE -> youtube(url)
+                Platform.FACEBOOK -> ogPage(url, Http.UA_BOT)
+                Platform.PINTEREST -> pinterest(url)
+                Platform.WEB -> web(url)
+            }
+        } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Последний шанс: превью ссылки, которое соцсети отдают роботам мессенджеров
+            runCatching { ogPage(url, Http.UA_BOT) }.getOrNull()?.takeIf { it.text.isNotBlank() }
+                ?: throw if (e is ImportException) e else ImportException(ImportException.Reason.BAD_RESPONSE, e.message)
         }
 
         val ai = gemini()
@@ -61,7 +87,7 @@ class LinkImporter(private val gemini: () -> GeminiClient?) {
             val material = listOfNotNull(src.title, src.text).joinToString("\n\n").trim()
             if (ai != null && material.isNotBlank()) {
                 parsed = runCatching { ai.extract(material) }
-                    .onFailure { warnings += it.message ?: "Ошибка ИИ" }
+                    .onFailure { aiError = it.message ?: "Gemini error" }
                     .getOrNull()
             }
         }
@@ -69,45 +95,99 @@ class LinkImporter(private val gemini: () -> GeminiClient?) {
 
         val draft = base.copy(
             title = base.title.ifBlank { src.title?.let { CaptionParser.cleanTitle(it) } ?: "" }
-                .ifBlank { "Рецепт" + (src.author?.let { " от $it" } ?: "") },
+                .ifBlank { src.author?.let { "@$it" } ?: "" },
             imageUrl = base.imageUrl ?: src.image,
             sourceUrl = src.url,
             author = base.author ?: src.author,
         )
 
         if (draft.ingredients.isEmpty()) {
-            warnings += if (ai == null)
-                "В описании не нашлось списка ингредиентов. Впиши их вручную или добавь бесплатный ключ Gemini в настройках — тогда ИИ разберёт даже сложные подписи."
-            else "В посте нет списка ингредиентов — возможно, он только в самом видео. Впиши вручную."
+            warnings += if (ai == null) ImportWarning.NO_INGREDIENTS else ImportWarning.NO_INGREDIENTS_WITH_AI
         }
-        return ImportResult(withNutrition(draft, ai != null), warnings)
+        return ImportResult(withNutrition(draft), warnings, aiError)
     }
 
     /** Считает КБЖУ встроенной таблицей; если покрытие плохое — оставляет оценку сайта/ИИ. */
-    fun withNutrition(draft: RecipeDraft, aiAvailable: Boolean = false): RecipeDraft {
+    fun withNutrition(draft: RecipeDraft): RecipeDraft {
         val r = NutritionDb.calculate(draft.ingredients)
         if (r.considered == 0) return draft
         val local = r.total
         val ownBetter = draft.nutrition == null || r.coverage >= 0.8
         return if (ownBetter && r.matched > 0) draft.copy(
             nutrition = local,
-            nutritionNote = if (r.coverage >= 1.0) "Рассчитано по всем ингредиентам"
-            else "Рассчитано по ${r.matched} из ${r.considered} ингредиентов",
+            nutritionNote = if (r.coverage >= 1.0) NutritionNote.ALL else NutritionNote.partial(r.matched, r.considered),
         ) else draft
     }
 
     // ---------- Платформы ----------
 
+    /**
+     * TikTok: 1) раскрываем короткую ссылку; 2) oEmbed (подпись целиком);
+     * 3) если oEmbed ограничен (429) — данные со страницы видео; 4) og-теги.
+     */
     private suspend fun tiktok(url: String): Source {
-        val resolved = runCatching { Http.get(url, Http.UA_DESKTOP).finalUrl }.getOrDefault(url).substringBefore('?')
-        val oembed = Http.get("https://www.tiktok.com/oembed?url=" + enc(resolved), Http.UA_DESKTOP)
-        val o = json.parseToJsonElement(oembed.body).jsonObject
-        return Source(
-            url = resolved,
-            text = o["title"]?.jsonPrimitive?.content ?: "",
-            image = o["thumbnail_url"]?.jsonPrimitive?.content,
-            author = o["author_name"]?.jsonPrimitive?.content,
-        )
+        val full = runCatching { Http.resolve(url) }.getOrDefault(url)
+        val canonical = full.substringBefore('?')
+        var firstError: Exception? = null
+
+        // 1. oEmbed
+        try {
+            val page = Http.getWithRetry("https://www.tiktok.com/oembed?url=" + enc(canonical), Http.UA_DESKTOP, attempts = 2)
+            val o = json.parseToJsonElement(page.body).jsonObject
+            val text = o["title"]?.jsonPrimitive?.content.orEmpty()
+            if (text.isNotBlank()) return Source(
+                url = canonical,
+                text = text,
+                image = o["thumbnail_url"]?.jsonPrimitive?.content,
+                author = o["author_name"]?.jsonPrimitive?.content,
+            )
+        } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            firstError = e
+        }
+
+        // 2. Страница видео: встроенные данные (__UNIVERSAL_DATA_FOR_REHYDRATION__ / SIGI_STATE) и og-теги
+        for (ua in listOf(Http.UA_DESKTOP, Http.UA_BOT)) {
+            val page = runCatching { Http.getWithRetry(canonical, ua, attempts = 2) }.getOrNull() ?: continue
+            val doc = Jsoup.parse(page.body, page.finalUrl)
+            tiktokEmbedded(doc)?.let { return it.copy(url = canonical) }
+            val og = fromDoc(canonical, doc)
+            if (og.text.isNotBlank()) return og.copy(url = canonical)
+        }
+        throw (firstError as? ImportException) ?: ImportException(ImportException.Reason.BAD_RESPONSE, firstError?.message)
+    }
+
+    private fun tiktokEmbedded(doc: Document): Source? {
+        val raw = doc.selectFirst("script#__UNIVERSAL_DATA_FOR_REHYDRATION__")?.data()
+            ?: doc.selectFirst("script#SIGI_STATE")?.data()
+            ?: return null
+        val root = runCatching { json.parseToJsonElement(raw) }.getOrNull() ?: return null
+        val item = findItemStruct(root) ?: return null
+        val desc = (item["desc"] as? kotlinx.serialization.json.JsonPrimitive)?.content.orEmpty()
+        if (desc.isBlank()) return null
+        val author = (item["author"] as? kotlinx.serialization.json.JsonObject)?.get("uniqueId")
+            ?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.content }
+            ?: (item["author"] as? kotlinx.serialization.json.JsonPrimitive)?.content
+        val cover = (item["video"] as? kotlinx.serialization.json.JsonObject)?.let { v ->
+            listOf("cover", "originCover", "dynamicCover").firstNotNullOfOrNull { k ->
+                (v[k] as? kotlinx.serialization.json.JsonPrimitive)?.content?.takeIf { it.startsWith("http") }
+            }
+        }
+        return Source(url = "", text = desc, image = cover, author = author)
+    }
+
+    /** Ищет объект видео (с полями desc и id) в любом месте JSON. */
+    private fun findItemStruct(el: kotlinx.serialization.json.JsonElement, depth: Int = 0): kotlinx.serialization.json.JsonObject? {
+        if (depth > 8) return null
+        return when (el) {
+            is kotlinx.serialization.json.JsonObject -> {
+                if ("desc" in el && "id" in el) el
+                else el.values.firstNotNullOfOrNull { findItemStruct(it, depth + 1) }
+            }
+            is kotlinx.serialization.json.JsonArray -> el.firstNotNullOfOrNull { findItemStruct(it, depth + 1) }
+            else -> null
+        }
     }
 
     private suspend fun instagram(url: String): Source {
@@ -176,7 +256,7 @@ class LinkImporter(private val gemini: () -> GeminiClient?) {
     }
 
     private suspend fun pinterest(url: String): Source {
-        val page = Http.get(url, Http.UA_DESKTOP)
+        val page = Http.getWithRetry(url, Http.UA_DESKTOP)
         val doc = Jsoup.parse(page.body, page.finalUrl)
         // Пин обычно ведёт на сайт с рецептом — импортируем оттуда
         val external = doc.selectFirst("meta[property=og:see_also]")?.attr("content")
@@ -190,7 +270,7 @@ class LinkImporter(private val gemini: () -> GeminiClient?) {
     }
 
     private suspend fun web(url: String): Source {
-        val page = Http.get(url, Http.UA_MOBILE)
+        val page = Http.getWithRetry(url, Http.UA_MOBILE)
         val doc = Jsoup.parse(page.body, page.finalUrl)
         JsonLd.findRecipe(doc)?.let { obj ->
             val d = JsonLd.toDraft(obj, page.finalUrl)
@@ -207,7 +287,7 @@ class LinkImporter(private val gemini: () -> GeminiClient?) {
     }
 
     private suspend fun ogPage(url: String, ua: String): Source {
-        val page = Http.get(url, ua)
+        val page = Http.getWithRetry(url, ua)
         return fromDoc(page.finalUrl, Jsoup.parse(page.body, page.finalUrl))
     }
 

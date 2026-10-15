@@ -7,6 +7,7 @@ import androidx.room.PrimaryKey
 import androidx.room.TypeConverter
 import app.receptnik.core.Ingredient
 import app.receptnik.core.Nutrition
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
@@ -96,17 +97,28 @@ data class GroceryItem(
 /** Строка плана + рецепт (для экрана планирования). */
 data class PlannedMeal(val entry: MealPlanEntry, val recipe: Recipe)
 
-class Converters {
+/** Сериализация для конвертеров Room. Вынесено отдельно: KSP не видит типы, сгенерированные плагином сериализации. */
+internal object JsonCodec {
     private val json = Json { ignoreUnknownKeys = true }
-    private val ingList = ListSerializer(Ingredient.serializer())
-    private val strList = ListSerializer(String.serializer())
+    private val ingList: KSerializer<List<Ingredient>> = ListSerializer(Ingredient.serializer())
+    private val strList: KSerializer<List<String>> = ListSerializer(String.serializer())
+    private val nutrition: KSerializer<Nutrition> = Nutrition.serializer()
 
-    @TypeConverter fun ingredientsToJson(v: List<Ingredient>): String = json.encodeToString(ingList, v)
-    @TypeConverter fun jsonToIngredients(v: String): List<Ingredient> = runCatching { json.decodeFromString(ingList, v) }.getOrDefault(emptyList())
-    @TypeConverter fun stringsToJson(v: List<String>): String = json.encodeToString(strList, v)
-    @TypeConverter fun jsonToStrings(v: String): List<String> = runCatching { json.decodeFromString(strList, v) }.getOrDefault(emptyList())
-    @TypeConverter fun nutritionToJson(v: Nutrition?): String? = v?.let { json.encodeToString(Nutrition.serializer(), it) }
-    @TypeConverter fun jsonToNutrition(v: String?): Nutrition? = v?.let { runCatching { json.decodeFromString(Nutrition.serializer(), it) }.getOrNull() }
+    fun encodeIngredients(v: List<Ingredient>): String = json.encodeToString(ingList, v)
+    fun decodeIngredients(v: String): List<Ingredient> = runCatching { json.decodeFromString(ingList, v) }.getOrDefault(emptyList())
+    fun encodeStrings(v: List<String>): String = json.encodeToString(strList, v)
+    fun decodeStrings(v: String): List<String> = runCatching { json.decodeFromString(strList, v) }.getOrDefault(emptyList())
+    fun encodeNutrition(v: Nutrition): String = json.encodeToString(nutrition, v)
+    fun decodeNutrition(v: String): Nutrition? = runCatching { json.decodeFromString(nutrition, v) }.getOrNull()
+}
+
+class Converters {
+    @TypeConverter fun ingredientsToJson(v: List<Ingredient>): String = JsonCodec.encodeIngredients(v)
+    @TypeConverter fun jsonToIngredients(v: String): List<Ingredient> = JsonCodec.decodeIngredients(v)
+    @TypeConverter fun stringsToJson(v: List<String>): String = JsonCodec.encodeStrings(v)
+    @TypeConverter fun jsonToStrings(v: String): List<String> = JsonCodec.decodeStrings(v)
+    @TypeConverter fun nutritionToJson(v: Nutrition?): String? = v?.let { JsonCodec.encodeNutrition(it) }
+    @TypeConverter fun jsonToNutrition(v: String?): Nutrition? = v?.let { JsonCodec.decodeNutrition(it) }
     @TypeConverter fun slotToString(v: MealSlot): String = v.name
     @TypeConverter fun stringToSlot(v: String): MealSlot = runCatching { MealSlot.valueOf(v) }.getOrDefault(MealSlot.DINNER)
 }

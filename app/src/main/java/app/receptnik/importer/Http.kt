@@ -2,10 +2,14 @@ package app.receptnik.importer
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.Cookie
+import okhttp3.CookieJar
+import okhttp3.HttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.File
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
@@ -22,7 +26,30 @@ object Http {
     /** Social networks serve link previews (og: tags) to their own crawlers. */
     const val UA_BOT = "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)"
 
+    /**
+     * In-memory cookie store. Some CDNs (TikTok) only serve video files to clients
+     * that previously loaded the video page and received its cookies.
+     */
+    private val cookieJar = object : CookieJar {
+        private val store = java.util.concurrent.ConcurrentHashMap<String, MutableList<Cookie>>()
+        override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
+            val key = registrableDomain(url.host)
+            val list = store.getOrPut(key) { java.util.Collections.synchronizedList(mutableListOf()) }
+            synchronized(list) {
+                list.removeAll { old -> cookies.any { it.name == old.name } }
+                list.addAll(cookies)
+            }
+        }
+        override fun loadForRequest(url: HttpUrl): List<Cookie> {
+            val list = store[registrableDomain(url.host)] ?: return emptyList()
+            val now = System.currentTimeMillis()
+            return synchronized(list) { list.filter { it.expiresAt > now && it.matches(url) } }
+        }
+        private fun registrableDomain(host: String) = host.split('.').takeLast(2).joinToString(".")
+    }
+
     val client: OkHttpClient = OkHttpClient.Builder()
+        .cookieJar(cookieJar)
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .callTimeout(60, TimeUnit.SECONDS)
@@ -90,6 +117,37 @@ object Http {
             Page(resp.request.url.toString(), String(bytes, charset), resp.code)
         }
     }
+
+    /**
+     * Streams a (video) file to [dest], aborting if it exceeds [maxBytes].
+     * Returns false when the server refuses the request or the file is too large.
+     */
+    suspend fun download(url: String, dest: File, ua: String = UA_DESKTOP, referer: String? = null, maxBytes: Long = 150L * 1024 * 1024): Boolean =
+        withContext(Dispatchers.IO) {
+            val req = Request.Builder().url(url).header("User-Agent", ua)
+                .apply { if (referer != null) header("Referer", referer) }
+                .build()
+            val longClient = client.newBuilder().callTimeout(5, TimeUnit.MINUTES).readTimeout(60, TimeUnit.SECONDS).build()
+            longClient.newCall(req).execute().use { resp ->
+                if (!resp.isSuccessful) return@withContext false
+                val body = resp.body ?: return@withContext false
+                if (body.contentLength() > maxBytes) return@withContext false
+                var total = 0L
+                body.byteStream().use { input ->
+                    dest.outputStream().use { out ->
+                        val buf = ByteArray(64 * 1024)
+                        while (true) {
+                            val n = input.read(buf)
+                            if (n < 0) break
+                            total += n
+                            if (total > maxBytes) return@withContext false
+                            out.write(buf, 0, n)
+                        }
+                    }
+                }
+                total > 0
+            }
+        }
 
     suspend fun getBytes(url: String, ua: String = UA_MOBILE): ByteArray = withContext(Dispatchers.IO) {
         val req = Request.Builder().url(url).header("User-Agent", ua).build()

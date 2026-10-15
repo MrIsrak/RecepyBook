@@ -206,6 +206,16 @@
     <string name="restored_n">Восстановлено рецептов: %d</string>
     <string name="bad_backup">Файл не подходит: %s</string>
     <string name="about_line">Рецептник %s — бесплатно, без рекламы и подписок.</string>
+    <string name="stage_reading">Читаю подпись…</string>
+    <string name="stage_downloading_video">Скачиваю видео…</string>
+    <string name="stage_watching_video">Смотрю видео…</string>
+    <string name="stage_video_hint">В подписи рецепта нет — ИИ достаёт его из самого видео. Это может занять до минуты.</string>
+    <string name="from_video_notice">Рецепт извлечён ИИ из видео. Проверь количества перед сохранением.</string>
+    <string name="ai_err_network">Не удалось связаться с Google AI (generativelanguage.googleapis.com). Если включён «Частный DNS», блокировщик рекламы или VPN — проверь, что этот адрес не заблокирован. Использован встроенный разбор.</string>
+    <string name="ai_err_key">Ключ Gemini не принят. Проверь его в настройках.</string>
+    <string name="ai_err_model">Модель Gemini не найдена. Верни имя модели по умолчанию в настройках.</string>
+    <string name="ai_err_quota">Бесплатный лимит Gemini пока исчерпан. Попробуй позже.</string>
+    <string name="ai_err_video">ИИ не смог обработать это видео. Использован встроенный разбор.</string>
     <plurals name="recipes_count">
         <item quantity="one">%d рецепт</item>
         <item quantity="few">%d рецепта</item>

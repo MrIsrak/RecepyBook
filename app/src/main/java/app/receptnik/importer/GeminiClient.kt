@@ -19,10 +19,10 @@ import java.io.IOException
 import java.net.URLEncoder
 
 /**
- * Необязательный «умный» разбор через Google Gemini (у Google есть бесплатный тариф:
- * ключ берётся на aistudio.google.com). Без ключа приложение работает на встроенном парсере.
+ * Optional smart parsing via Google Gemini (Google offers a free tier;
+ * keys come from aistudio.google.com). Without a key the app uses the built-in parser.
  */
-/** [targetLanguage] — язык, на который переводить рецепт (например "Russian"), или null, чтобы сохранить оригинал. */
+/** [targetLanguage] is the language to translate into (e.g. "Russian"), or null to keep the original. */
 class GeminiClient(private val apiKey: String, private val model: String, private val targetLanguage: String?) {
 
     @Serializable

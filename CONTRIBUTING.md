@@ -1,50 +1,114 @@
-# Как участвовать
+# Contributing to RecepyBook
 
-Спасибо, что хочешь помочь RecepyBook!
+Thank you for your interest in improving RecepyBook. This guide describes how we work, so that every change is reviewed, tested and releasable.
 
-## Ветки
+By participating, you agree to follow our [Code of Conduct](CODE_OF_CONDUCT.md).
 
-| Ветка | Назначение |
+## Table of contents
+
+- [Ways to contribute](#ways-to-contribute)
+- [Branching model](#branching-model)
+- [Commit messages](#commit-messages)
+- [Pull request process](#pull-request-process)
+- [Definition of done](#definition-of-done)
+- [Code style](#code-style)
+- [Localization](#localization)
+- [Reporting bugs and requesting features](#reporting-bugs-and-requesting-features)
+
+## Ways to contribute
+
+- Report import failures with the exact link that failed. This is the most valuable feedback we receive.
+- Improve the ingredient parser or the food table in `core/`.
+- Add or improve translations (see [docs/LOCALIZATION.md](docs/LOCALIZATION.md)).
+- Fix bugs and implement issues labelled `good first issue` or `help wanted`.
+
+For larger changes, open an issue first so the approach can be agreed before work starts.
+
+## Branching model
+
+| Branch | Purpose | Merges into |
+|---|---|---|
+| `main` | Released, stable code. Every release is a tag `vX.Y.Z` on `main`. | — |
+| `develop` | Integration branch for the next release. | `main` (via release PR) |
+| `feature/<short-name>` | New functionality, branched from `develop`. | `develop` |
+| `fix/<short-name>` | Non-urgent bug fixes, branched from `develop`. | `develop` |
+| `docs/<short-name>` | Documentation-only changes, branched from `develop`. | `develop` |
+| `hotfix/<short-name>` | Urgent fixes to a release, branched from `main`. | `main` and `develop` |
+
+Direct pushes to `main` are not allowed; all changes arrive through pull requests.
+
+## Commit messages
+
+We follow [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/). Write messages in English, in the imperative mood.
+
+```
+<type>(<optional scope>): <summary in imperative mood, ≤ 72 chars>
+
+<optional body: what and why, wrapped at 72 chars>
+
+<optional footer: Closes #123, BREAKING CHANGE: ...>
+```
+
+| Type | Use for |
 |---|---|
-| `main` | Стабильная версия. Только через PR из `develop` или `hotfix/*`. Каждый релиз — тег `vX.Y.Z` на `main` |
-| `develop` | Интеграционная ветка, сюда вливаются фичи |
-| `feature/<кратко>` | Новая возможность, ответвляется от `develop` |
-| `fix/<кратко>` | Исправление, ответвляется от `develop` |
-| `hotfix/<кратко>` | Срочное исправление релиза, ответвляется от `main`, вливается в `main` и `develop` |
+| `feat` | A user-visible feature |
+| `fix` | A bug fix |
+| `perf` | A performance improvement |
+| `refactor` | A code change that neither fixes a bug nor adds a feature |
+| `test` | Adding or correcting tests |
+| `docs` | Documentation only |
+| `build` | Build system or dependencies |
+| `ci` | CI configuration |
+| `chore` | Maintenance that does not fit the above |
 
-## Коммиты
+Common scopes: `core`, `import`, `data`, `ui`, `i18n`, `release`.
 
-[Conventional Commits](https://www.conventionalcommits.org/ru/):
+Examples:
 
 ```
-feat(import): поддержка Threads
-fix(parser): «1 1/2 стакана» разбиралось как 1
-docs: инструкция по подписи
-chore(deps): обновить Compose BOM
+feat(import): support Threads posts
+fix(core): parse "1 1/2 cups" as 1.5 instead of 1
+docs: describe the release signing setup
 ```
 
-Типы: `feat`, `fix`, `perf`, `refactor`, `test`, `docs`, `build`, `ci`, `chore`.
+## Pull request process
 
-## Pull request
+1. Branch from `develop` using the naming scheme above.
+2. Keep the PR focused on one logical change.
+3. Run the checks locally:
+   ```bash
+   ./gradlew testDebugUnitTest assembleDebug lintDebug
+   ```
+4. Add an entry under `[Unreleased]` in [CHANGELOG.md](CHANGELOG.md) for any user-visible change.
+5. Open the PR against `develop` and complete the template.
+6. CI must be green. A maintainer reviews the change; address feedback with additional commits rather than force-pushes during review.
+7. PRs into `develop` are merged with a merge commit; release PRs into `main` are merged with a merge commit titled `Release X.Y.Z (#N)`.
 
-1. Ответвись от `develop`.
-2. Пиши тесты для логики в `core/` — она на чистом Kotlin и тестируется без эмулятора.
-3. `./gradlew testDebugUnitTest assembleDebug` должен проходить локально.
-4. Добавь строку в `CHANGELOG.md` в раздел `[Unreleased]`.
-5. Открой PR в `develop` и заполни шаблон. CI обязан быть зелёным.
+## Definition of done
 
-## Стиль кода
+A change is complete when:
 
-- Официальный стиль Kotlin (`kotlin.code.style=official`), отступ 4 пробела, см. `.editorconfig`.
-- Строки интерфейса пишутся на русском.
-- Логика разбора живёт в `core/` и не зависит от Android.
+- [ ] It builds and all unit tests pass in CI.
+- [ ] Parser and conversion logic in `core/` is covered by unit tests.
+- [ ] UI changes are checked in light and dark themes and in Hebrew (RTL).
+- [ ] Every new user-facing string exists in `values`, `values-ru` and `values-iw`.
+- [ ] Documentation and the changelog are updated.
+- [ ] No secrets, API keys, keystores or personal data are committed.
 
-## Выпуск релиза (для мейнтейнера)
+## Code style
 
-1. PR `develop → main`, merge.
-2. В `CHANGELOG.md` переименуй `[Unreleased]` в `[X.Y.Z] - ГГГГ-ММ-ДД` и добавь новый пустой `[Unreleased]`.
-3. `git tag vX.Y.Z && git push origin vX.Y.Z`. Workflow `Release` соберёт подписанный APK и опубликует релиз с заметками из CHANGELOG.
+- Follow the [Kotlin coding conventions](https://kotlinlang.org/docs/coding-conventions.html) (`kotlin.code.style=official`); formatting rules are in [.editorconfig](.editorconfig).
+- Keep `core/` free of Android dependencies so it stays unit-testable on the JVM.
+- Never hard-code user-facing text in Kotlin; use string resources.
+- Document public classes and non-obvious functions with KDoc in English.
+- Prefer small, composable functions; avoid speculative abstractions.
 
-## Сообщить о проблеме
+See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for the full development guide.
 
-Используй [шаблоны issue](https://github.com/MrIsrak/RecepyBook/issues/new/choose). Для ошибок импорта обязательно прикладывай ссылку на пост.
+## Localization
+
+User-facing strings live in `app/src/main/res/values*/strings.xml`. English is the default locale. See [docs/LOCALIZATION.md](docs/LOCALIZATION.md).
+
+## Reporting bugs and requesting features
+
+Use the [issue templates](https://github.com/MrIsrak/RecepyBook/issues/new/choose). For import problems, always include the link that failed. Report security vulnerabilities privately as described in [SECURITY.md](SECURITY.md).

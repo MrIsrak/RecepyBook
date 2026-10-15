@@ -21,12 +21,12 @@ import androidx.compose.ui.unit.sp
 import app.receptnik.R
 
 /*
- * Дизайн: минимализм. Тёплый белый фон, графитовый текст, один акцент (коралл),
- * тонкие линии вместо теней, крупная типографика, фото — главный элемент.
- * Шрифт Rubik (OFL) покрывает латиницу, кириллицу и иврит.
+ * Design: minimalism. Warm white background, graphite text, a single coral accent,
+ * hairlines instead of shadows, large type, photos as the hero element.
+ * The Rubik font (OFL) covers Latin, Cyrillic and Hebrew.
  */
 
-/** Единственный акцентный цвет. */
+/** The single accent color. */
 val Accent = Color(0xFFFF5B37)
 
 private val LightColors = lightColorScheme(
@@ -144,10 +144,10 @@ fun ReceptnikTheme(content: @Composable () -> Unit) {
     )
 }
 
-/** Вторичный (приглушённый) цвет текста. */
+/** Secondary (muted) text color. */
 val muted: Color
     @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.onSurfaceVariant
 
-/** Цвет тонких разделителей. */
+/** Hairline divider color. */
 val hairline: Color
     @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.outlineVariant

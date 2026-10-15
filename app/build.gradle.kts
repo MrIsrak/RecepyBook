@@ -14,13 +14,13 @@ android {
         applicationId = "app.receptnik"
         minSdk = 26
         targetSdk = 35
-        // CI передаёт версию из git-тега: -PversionName=1.2.0 -PversionCode=10200
+        // CI passes the version from the git tag: -PversionName=1.2.0 -PversionCode=10200
         versionCode = (findProperty("versionCode") as String?)?.toInt() ?: 1
         versionName = (findProperty("versionName") as String?) ?: "1.0.0"
     }
 
-    // Ключ подписи берётся из переменных окружения (секреты GitHub Actions).
-    // Без них release подписывается debug-ключом — APK всё равно устанавливается.
+    // The signing key comes from environment variables (GitHub Actions secrets).
+    // Without them, release builds fall back to the debug key so the APK still installs.
     val keystorePath = System.getenv("SIGNING_KEYSTORE_PATH")
     signingConfigs {
         if (keystorePath != null && file(keystorePath).exists()) {
@@ -70,7 +70,7 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 
     implementation("androidx.core:core-ktx:1.15.0")
-    implementation("androidx.appcompat:appcompat:1.7.0") // выбор языка внутри приложения
+    implementation("androidx.appcompat:appcompat:1.7.0") // per-app language selection
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
@@ -88,7 +88,7 @@ dependencies {
     implementation("org.jsoup:jsoup:1.18.3")
     implementation("io.coil-kt:coil-compose:2.7.0")
 
-    // Распознавание текста с фото рецепта (на устройстве, бесплатно)
+    // On-device text recognition for recipe photos (free, offline)
     implementation("com.google.mlkit:text-recognition:16.0.1")
 
     testImplementation("junit:junit:4.13.2")

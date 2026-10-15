@@ -87,9 +87,9 @@ fun rememberContainer(): AppContainer {
     return remember { ctx.container }
 }
 
-// ───────────────────────── Язык и форматирование ─────────────────────────
+// ───────────────────────── Language & formatting ─────────────────────────
 
-/** Язык интерфейса для ядра: "ru" | "en" | "he". */
+/** UI language code for the core module: "ru" | "en" | "he". */
 @Composable
 fun uiLang(): String = Lang.of(LocalConfiguration.current.locales[0].language)
 
@@ -139,7 +139,7 @@ fun slotLabel(slot: MealSlot): String = stringResource(
     }
 )
 
-/** Пояснение к КБЖУ: коды из импорта или текст из версии 1.0. */
+/** Nutrition source note: import codes, or legacy 1.0 text. */
 @Composable
 fun nutritionNoteText(note: String?): String = when {
     note == null -> stringResource(R.string.nutrition_estimate)
@@ -196,9 +196,9 @@ fun recipeAsText(res: Resources, r: Recipe, factor: Double, system: UnitSystem, 
     r.sourceUrl?.let { appendLine(); appendLine(res.getString(R.string.source_label, it)) }
 }
 
-// ───────────────────────── Компоненты ─────────────────────────
+// ───────────────────────── Components ─────────────────────────
 
-/** Каркас экрана: прозрачная шапка, крупный заголовок на вкладках. */
+/** Screen scaffold: transparent top bar, large title on tab screens. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppScaffold(
@@ -241,7 +241,7 @@ fun AppScaffold(
     ) { pad -> content(Modifier.padding(pad)) }
 }
 
-/** Капсула-фильтр: выбранная — залитая графитом, остальные — тонкая обводка. */
+/** Filter pill: graphite fill when selected, hairline outline otherwise. */
 @Composable
 fun Pill(
     text: String,
@@ -272,7 +272,7 @@ fun Pill(
     }
 }
 
-/** Небольшой подзаголовок раздела капслоком. */
+/** Small all-caps section label. */
 @Composable
 fun SectionLabel(text: String, modifier: Modifier = Modifier) {
     Text(
@@ -286,7 +286,7 @@ fun SectionLabel(text: String, modifier: Modifier = Modifier) {
 @Composable
 fun Hairline(modifier: Modifier = Modifier) = HorizontalDivider(modifier, thickness = 1.dp, color = hairline)
 
-/** Поле ввода в стиле приложения: мягкая заливка без рамки. */
+/** App-styled text field: soft fill, no visible border. */
 @Composable
 fun softFieldColors(): TextFieldColors = OutlinedTextFieldDefaults.colors(
     focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -329,7 +329,7 @@ fun EmptyState(title: String, text: String, modifier: Modifier = Modifier) {
     }
 }
 
-/** Строка рецепта для списков: миниатюра, название, мета. */
+/** Recipe list row: thumbnail, title and meta line. */
 @Composable
 fun RecipeRow(r: Recipe, subtitle: String? = null, onClick: () -> Unit, trailing: @Composable () -> Unit = {}) {
     val time = minutesText(r.totalTimeMin)
@@ -384,7 +384,7 @@ fun RecipePickerDialog(
     )
 }
 
-/** Круглая полупрозрачная кнопка поверх фото. */
+/** Round translucent button placed over a photo. */
 @Composable
 fun GlassIconButton(icon: ImageVector, description: String, onClick: () -> Unit, tint: androidx.compose.ui.graphics.Color? = null, size: Dp = 44.dp) {
     Surface(

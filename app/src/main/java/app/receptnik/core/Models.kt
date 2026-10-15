@@ -2,7 +2,7 @@ package app.receptnik.core
 
 import kotlinx.serialization.Serializable
 
-/** Один ингредиент. [original] — строка как в источнике, остальное — разобранные части. */
+/** A single ingredient. [original] is the source line; the other fields are its parsed parts. */
 @Serializable
 data class Ingredient(
     val original: String,
@@ -11,11 +11,11 @@ data class Ingredient(
     val unit: String? = null,
     val name: String = original,
     val note: String? = null,
-    /** Заголовок группы ("Для соуса"): такая строка не является ингредиентом. */
+    /** Group header ("For the sauce"); such a line is not an ingredient. */
     val isHeader: Boolean = false,
 )
 
-/** Пищевая ценность (на весь рецепт). */
+/** Nutrition facts for the whole recipe. */
 @Serializable
 data class Nutrition(
     val kcal: Double = 0.0,
@@ -28,7 +28,7 @@ data class Nutrition(
     operator fun div(k: Double) = if (k == 0.0) this else times(1.0 / k)
 }
 
-/** Черновик рецепта — результат импорта, до сохранения в базу. */
+/** Recipe draft: the import result before it is saved to the database. */
 data class RecipeDraft(
     val title: String = "",
     val description: String = "",

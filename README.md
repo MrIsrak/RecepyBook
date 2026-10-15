@@ -1,113 +1,117 @@
 <div align="center">
 
-# RecepyBook · Рецептник
+# RecepyBook
 
-**Бесплатное Android-приложение для рецептов: сохраняй рецепты из Instagram, TikTok и YouTube одним нажатием, планируй меню и собирай список покупок.**
+**A free, ad-free Android recipe manager. Save recipes from Instagram, TikTok and YouTube in one tap, plan your week and build your shopping list.**
 
 [![CI](https://github.com/MrIsrak/RecepyBook/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/MrIsrak/RecepyBook/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/MrIsrak/RecepyBook?label=%D0%B2%D0%B5%D1%80%D1%81%D0%B8%D1%8F)](https://github.com/MrIsrak/RecepyBook/releases/latest)
+[![Release](https://img.shields.io/github/v/release/MrIsrak/RecepyBook)](https://github.com/MrIsrak/RecepyBook/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Android 8.0+](https://img.shields.io/badge/Android-8.0%2B-3DDC84?logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0-7F52FF?logo=kotlin&logoColor=white)
+![Languages](https://img.shields.io/badge/UI-English%20·%20Русский%20·%20עברית-555)
 
-[**⬇ Скачать APK**](https://github.com/MrIsrak/RecepyBook/releases/latest) · [Возможности](#возможности) · [Установка](#установка) · [Сборка](#сборка-из-исходников) · [English](#english)
+[**Download APK**](https://github.com/MrIsrak/RecepyBook/releases/latest) · [Features](#features) · [Installation](#installation) · [Documentation](#documentation) · [Contributing](CONTRIBUTING.md)
 
 </div>
 
 ---
 
-## Зачем
+## Overview
 
-Рецепты сейчас живут в соцсетях: короткое видео, а ингредиенты где-то в подписи между эмодзи и хэштегами. Платные приложения вроде ReciMe решают это за подписку. **RecepyBook делает то же самое бесплатно**, без рекламы, без аккаунта: все данные хранятся только на телефоне.
+Most home recipes now live on social media: a short video, with the ingredients buried in a caption between emojis and hashtags. Subscription apps such as ReciMe solve this for a monthly fee. **RecepyBook does the same for free**, with no ads and no account. All data stays on the device.
 
-## Возможности
+## Features
 
-| | |
+| Area | Capability |
 |---|---|
-| 🔗 **Импорт по ссылке** | Instagram, TikTok, YouTube (и Shorts), Facebook, Pinterest и любые сайты с разметкой schema.org/Recipe. Нажимаешь «Поделиться» → «Рецептник», и приложение достаёт подпись, разбирает ингредиенты и шаги, сохраняет обложку |
-| 👀 **Превью перед сохранением** | Видно, что распозналось: число ингредиентов и шагов, время, калории. Всё можно поправить |
-| 📷 **С фото** | Скриншот или страница кулинарной книги (распознавание текста на устройстве) |
-| 🔥 **Калории и БЖУ** | Встроенная таблица ~130 продуктов с названиями на русском, английском и иврите; расчёт на порцию |
-| ⚖️ **Порции и единицы** | Пересчёт количеств под любое число порций; «как в рецепте» / граммы и мл / US (cups, oz) |
-| 📚 **Кулинарные книги** | Собирай рецепты в подборки с эмодзи и обложками |
-| 📅 **План питания** | Неделя: завтрак, обед, ужин, перекус; калории за день; вся неделя в покупки одной кнопкой |
-| 🛒 **Список покупок** | По отделам магазина или по рецептам; одинаковые продукты складываются; отправка в WhatsApp или Telegram |
-| 👨‍🍳 **Режим готовки** | Крупный текст по шагам, экран не гаснет, таймер из шага одним нажатием |
-| 🔎 **Поиск и сортировка** | По названию, ингредиентам, тегам; новые, по алфавиту, быстрые, менее калорийные, недавно готовил |
-| 🌍 **Три языка** | Английский, русский, иврит (справа налево); переключение прямо в настройках |
-| 💾 **Резервная копия** | Экспорт всего (вместе с фото) в один файл, восстановление на другом телефоне |
+| **Link import** | Instagram, TikTok, YouTube (incl. Shorts), Facebook, Pinterest, and any website with schema.org/Recipe markup. Share a post to RecepyBook and it extracts the caption, parses ingredients and steps, and saves the cover image. |
+| **Review before saving** | A preview shows what was recognized (ingredient and step counts, time, calories). Every field is editable. |
+| **Photo import** | Screenshots and cookbook pages, using on-device text recognition. |
+| **Nutrition** | Calories and macros per serving from a built-in table of ~130 foods named in English, Russian and Hebrew. |
+| **Scaling & units** | Scale to any number of servings; show amounts as written, in metric, or in US units. |
+| **Cookbooks** | Group recipes into collections with emoji and photo covers. |
+| **Meal planner** | Weekly breakfast / lunch / dinner / snack planning with daily calorie totals; add a whole week to the shopping list in one tap. |
+| **Shopping list** | Grouped by store aisle or by recipe; duplicates are merged; share to WhatsApp or Telegram. |
+| **Cook mode** | Large type, one step per page, screen kept awake, one-tap timers detected from the step text. |
+| **Search & sort** | By title, ingredient, tag or cuisine; newest, A–Z, quickest, lowest calorie, recently cooked. |
+| **Languages** | English, Russian and Hebrew (full right-to-left layout), switchable in Settings. |
+| **Backup** | Export everything, including photos, to a single file and restore it on another phone. |
 
-### Умный разбор через ИИ (необязательно)
+### Optional AI parsing
 
-Встроенный парсер понимает подписи со списком ингредиентов. Если добавить **бесплатный** ключ Google Gemini (*Настройки → Умный разбор*), приложение будет:
-- разбирать подписи без явного списка;
-- понимать фото на любом языке;
-- переводить рецепты на русский;
-- точнее оценивать калорийность.
+The built-in parser handles captions that contain an ingredient list. With a **free** Google Gemini API key (*Settings → Smart parsing*), the app can also:
+- parse captions with no explicit list;
+- read photos in any language;
+- translate recipes into the app language;
+- give a closer calorie estimate.
 
-Ключ хранится только на устройстве. Как его получить, описано на экране настроек.
+The key is stored only on the device.
 
-## Установка
+## Installation
 
-1. Открой [последний релиз](https://github.com/MrIsrak/RecepyBook/releases/latest) с телефона.
-2. Скачай `RecepyBook-x.y.z.apk`.
-3. Открой файл и разреши установку из этого источника, если Android спросит.
+1. Open the [latest release](https://github.com/MrIsrak/RecepyBook/releases/latest) on your phone.
+2. Download `RecepyBook-x.y.z.apk`.
+3. Open the file and allow installation from this source if prompted.
 
-Требуется Android 8.0 или новее. Контрольные суммы лежат в `SHA256SUMS.txt` рядом с APK.
+**Requirements:** Android 8.0 (API 26) or later. Each release ships a `SHA256SUMS.txt` for verification.
 
-## Сборка из исходников
+> **Note:** until a permanent release signing key is configured, each version must be installed after uninstalling the previous one. Export a backup first (*Settings → Save backup*). See [docs/SIGNING.md](docs/SIGNING.md).
 
-Нужны JDK 17 и Android SDK (проще всего через Android Studio Ladybug или новее).
+## Building from source
+
+Requires JDK 17 and the Android SDK (Android Studio Ladybug or later recommended).
 
 ```bash
 git clone https://github.com/MrIsrak/RecepyBook.git
 cd RecepyBook
-./gradlew testDebugUnitTest   # unit-тесты
+./gradlew testDebugUnitTest   # unit tests
 ./gradlew assembleDebug       # app/build/outputs/apk/debug/app-debug.apk
 ```
 
-## Архитектура
+See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for the full developer guide.
 
-```
-app/src/main/java/app/receptnik/
-├── core/       чистый Kotlin без Android: разбор ингредиентов, единицы, таблица КБЖУ, разбор подписей
-├── importer/   загрузка ссылок по платформам, schema.org JSON-LD, фото (ML Kit), клиент Gemini
-├── data/       Room (рецепты, книги, план, покупки), DataStore-настройки, хранилище картинок, бэкап
-└── ui/         Jetpack Compose, Material 3, Navigation
-```
+## Documentation
 
-Подробнее см. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+| Document | Contents |
+|---|---|
+| [Architecture](docs/ARCHITECTURE.md) | Modules, data flow, persistence model |
+| [Development guide](docs/DEVELOPMENT.md) | Setup, build, testing, code style |
+| [Recipe import](docs/IMPORT.md) | How each platform is handled; troubleshooting |
+| [Localization](docs/LOCALIZATION.md) | Adding strings and languages; RTL rules |
+| [Design system](docs/DESIGN.md) | Colors, typography, components |
+| [Releasing](docs/RELEASING.md) | Versioning, release process, hotfixes |
+| [Release signing](docs/SIGNING.md) | Setting up a permanent signing key |
+| [Architecture decisions](docs/adr/README.md) | ADR log |
+| [Third-party notices](docs/THIRD_PARTY_NOTICES.md) | Open-source components and licenses |
 
-**Дизайн:** минимализм: тёплый белый и графит, один коралловый акцент, шрифт [Rubik](docs/licenses/Rubik-OFL.txt) (OFL), тонкие линии вместо теней.
+## Tech stack
 
-**Стек:** Kotlin 2.0 · Jetpack Compose · Material 3 · Room · DataStore · OkHttp · Jsoup · Coil · ML Kit · kotlinx.serialization
+Kotlin 2.0 · Jetpack Compose · Material 3 · Room · DataStore · OkHttp · Jsoup · Coil · ML Kit · kotlinx.serialization · AppCompat per-app locales
 
-## Разработка
+## Project status
 
-- `main`: стабильная ветка, из неё выпускаются релизы. Прямые коммиты запрещены, только через PR.
-- `develop`: текущая разработка; фичи вливаются сюда через PR из `feature/*`.
-- Релиз: PR `develop → main`, затем тег `vX.Y.Z`. GitHub Actions соберёт APK и опубликует релиз.
+Active development. See [CHANGELOG.md](CHANGELOG.md) for release history and the [issue tracker](https://github.com/MrIsrak/RecepyBook/issues) for planned work.
 
-Правила описаны в [CONTRIBUTING.md](CONTRIBUTING.md), история изменений в [CHANGELOG.md](CHANGELOG.md).
+## Known limitations
 
-## Ограничения
+- Some Instagram and Facebook posts are not readable without signing in. In that case the app falls back to the link preview, which usually contains the full caption.
+- When a recipe is only spoken in a video and is absent from the caption, ingredients must be entered manually.
+- Calorie values are estimates derived from a food table, not laboratory data.
 
-- Часть постов Instagram и Facebook закрыта для неавторизованного доступа. Тогда берётся текст из превью ссылки (обычно это вся подпись).
-- Если рецепт только озвучен в видео, а в подписи его нет, ингредиенты нужно вписать вручную.
-- Калорийность — оценка по таблице продуктов, а не лабораторные данные.
+## Contributing
 
-## Конфиденциальность
+Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md) first. Security issues: see [SECURITY.md](SECURITY.md).
 
-Аккаунтов, аналитики и рекламы нет. Подробнее см. [PRIVACY.md](PRIVACY.md).
+## Support
 
-## Лицензия
+See [SUPPORT.md](SUPPORT.md).
 
-[MIT](LICENSE) © 2026 MrIsrak
+## Privacy
 
----
+No accounts, analytics or ads. See [PRIVACY.md](PRIVACY.md).
 
-## English
+## License
 
-**RecepyBook** is a free, ad-free Android recipe manager, an open alternative to subscription apps like ReciMe. Share a post from Instagram, TikTok, YouTube, Facebook or Pinterest (or any recipe website) to the app. It extracts the caption, parses ingredients and steps, saves the cover image and estimates calories and macros. Also included: cookbooks, a weekly meal planner, a smart grocery list grouped by store aisle, serving scaling, metric/US unit conversion, a hands-free cook mode with timers, and full backup/restore. Optional AI parsing uses your own free Google Gemini key. All data stays on the device.
-
-[Download the latest APK](https://github.com/MrIsrak/RecepyBook/releases/latest) · MIT licensed
+Released under the [MIT License](LICENSE). © 2026 MrIsrak.
+The Rubik typeface is licensed under the [SIL Open Font License 1.1](docs/licenses/Rubik-OFL.txt).

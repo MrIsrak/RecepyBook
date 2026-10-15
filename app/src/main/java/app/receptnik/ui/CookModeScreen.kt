@@ -46,7 +46,7 @@ import app.receptnik.R
 import app.receptnik.core.QtyFormat
 import kotlinx.coroutines.launch
 
-/** Режим готовки: один шаг на экран, крупный текст, экран не гаснет. */
+/** Cook mode: one step per page, large type, screen kept awake. */
 @Composable
 fun CookModeScreen(id: Long, onBack: () -> Unit) {
     val c = rememberContainer()
@@ -154,7 +154,7 @@ fun CookModeScreen(id: Long, onBack: () -> Unit) {
     }
 }
 
-/** «варить 15 минут» → 15; «1 час» → 60; «1,5 часа» → 90; «20 דקות» → 20. */
+/** "boil 15 minutes" → 15; "1 hour" → 60; "1,5 часа" → 90; "20 דקות" → 20. */
 fun timerMinutes(text: String): Int? {
     val m = Regex(
         "(\\d+(?:[.,]\\d+)?)\\s*(?:-|–)?\\s*(?:\\d+\\s*)?(мин|min|דק|час|ч\\b|hour|hr|שע)",

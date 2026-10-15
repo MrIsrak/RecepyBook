@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   build:
-    name: Тесты и сборка
+    name: Test & build
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -29,16 +29,16 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Unit-тесты
+      - name: Unit tests
         run: ./gradlew testDebugUnitTest --no-daemon 2>&1 | tee -a build.log; exit ${PIPESTATUS[0]}
 
-      - name: Сборка debug APK
+      - name: Build debug APK
         run: ./gradlew assembleDebug --no-daemon 2>&1 | tee -a build.log; exit ${PIPESTATUS[0]}
 
       - name: Lint
         run: ./gradlew lintDebug --no-daemon
 
-      - name: Ошибки сборки → аннотации
+      - name: Surface build errors as annotations
         if: failure()
         run: |
           grep -E '^e: |What went wrong|FAILED|Could not |error:|Exception' build.log | head -40 | while IFS= read -r l; do
@@ -46,7 +46,7 @@ jobs:
           done
           grep -A12 'What went wrong' build.log | head -60 | tr '\n' ' ' | cut -c1-3000 | sed 's/^/::error title=gradle::/'
 
-      - name: Отчёты тестов и lint
+      - name: Upload test and lint reports
         if: always()
         uses: actions/upload-artifact@v4
         with:

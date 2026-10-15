@@ -14,10 +14,10 @@ import org.jsoup.nodes.TextNode
 import java.net.URI
 import java.net.URLEncoder
 
-/** Предупреждения импорта; тексты — в ресурсах интерфейса. */
+/** Import warnings; messages live in UI resources. */
 enum class ImportWarning { NO_INGREDIENTS, NO_INGREDIENTS_WITH_AI, PHOTO_UNREADABLE, PHOTO_NO_RECIPE }
 
-/** Коды пометки о происхождении КБЖУ (сохраняются в рецепте). */
+/** Codes describing where nutrition data came from (stored with the recipe). */
 object NutritionNote {
     const val SITE = "site"
     const val AI = "ai"
@@ -28,11 +28,11 @@ object NutritionNote {
 data class ImportResult(
     val draft: RecipeDraft,
     val warnings: List<ImportWarning> = emptyList(),
-    /** Текст ошибки Gemini, если ИИ не сработал (показывается как есть). */
+    /** Gemini error text when AI parsing failed (shown verbatim). */
     val aiError: String? = null,
 )
 
-/** Что удалось вытащить со страницы до разбора на рецепт. */
+/** Raw material extracted from a page before recipe parsing. */
 private data class Source(
     val url: String,
     val text: String = "",
@@ -76,7 +76,7 @@ class LinkImporter(private val gemini: () -> GeminiClient?) {
         } catch (e: kotlin.coroutines.cancellation.CancellationException) {
             throw e
         } catch (e: Exception) {
-            // Последний шанс: превью ссылки, которое соцсети отдают роботам мессенджеров
+            // Last resort: the link preview social networks serve to messenger crawlers
             runCatching { ogPage(url, Http.UA_BOT) }.getOrNull()?.takeIf { it.text.isNotBlank() }
                 ?: throw if (e is ImportException) e else ImportException(ImportException.Reason.BAD_RESPONSE, e.message)
         }
@@ -107,7 +107,7 @@ class LinkImporter(private val gemini: () -> GeminiClient?) {
         return ImportResult(withNutrition(draft), warnings, aiError)
     }
 
-    /** Считает КБЖУ встроенной таблицей; если покрытие плохое — оставляет оценку сайта/ИИ. */
+    /** Computes nutrition from the built-in table; keeps the site/AI estimate when coverage is poor. */
     fun withNutrition(draft: RecipeDraft): RecipeDraft {
         val r = NutritionDb.calculate(draft.ingredients)
         if (r.considered == 0) return draft
@@ -119,11 +119,11 @@ class LinkImporter(private val gemini: () -> GeminiClient?) {
         ) else draft
     }
 
-    // ---------- Платформы ----------
+    // ---------- Platforms ----------
 
     /**
-     * TikTok: 1) раскрываем короткую ссылку; 2) oEmbed (подпись целиком);
-     * 3) если oEmbed ограничен (429) — данные со страницы видео; 4) og-теги.
+     * TikTok: 1) expand the short link; 2) oEmbed (full caption);
+     * 3) if oEmbed is rate-limited (429), embedded page data; 4) og: tags.
      */
     private suspend fun tiktok(url: String): Source {
         val full = runCatching { Http.resolve(url) }.getOrDefault(url)
@@ -147,7 +147,7 @@ class LinkImporter(private val gemini: () -> GeminiClient?) {
             firstError = e
         }
 
-        // 2. Страница видео: встроенные данные (__UNIVERSAL_DATA_FOR_REHYDRATION__ / SIGI_STATE) и og-теги
+        // 2. Video page: embedded data (__UNIVERSAL_DATA_FOR_REHYDRATION__ / SIGI_STATE) and og: tags
         for (ua in listOf(Http.UA_DESKTOP, Http.UA_BOT)) {
             val page = runCatching { Http.getWithRetry(canonical, ua, attempts = 2) }.getOrNull() ?: continue
             val doc = Jsoup.parse(page.body, page.finalUrl)
@@ -177,7 +177,7 @@ class LinkImporter(private val gemini: () -> GeminiClient?) {
         return Source(url = "", text = desc, image = cover, author = author)
     }
 
-    /** Ищет объект видео (с полями desc и id) в любом месте JSON. */
+    /** Finds the video object (with desc and id fields) anywhere in the JSON. */
     private fun findItemStruct(el: kotlinx.serialization.json.JsonElement, depth: Int = 0): kotlinx.serialization.json.JsonObject? {
         if (depth > 8) return null
         return when (el) {
@@ -218,7 +218,7 @@ class LinkImporter(private val gemini: () -> GeminiClient?) {
         )
     }
 
-    /** «1 234 likes, 56 comments - user on May 5, 2026: "Подпись..."» → «Подпись...». */
+    /** "1,234 likes, 56 comments - user on May 5, 2026: \"Caption...\"" → "Caption...". */
     private fun cleanInstagramOg(desc: String, title: String?): String {
         fun strip(s: String): String {
             val idx = s.indexOf(": \"").takeIf { it in 0..200 } ?: s.indexOf(": “").takeIf { it in 0..200 }
@@ -258,7 +258,7 @@ class LinkImporter(private val gemini: () -> GeminiClient?) {
     private suspend fun pinterest(url: String): Source {
         val page = Http.getWithRetry(url, Http.UA_DESKTOP)
         val doc = Jsoup.parse(page.body, page.finalUrl)
-        // Пин обычно ведёт на сайт с рецептом — импортируем оттуда
+        // A pin usually links to the recipe website; import from there
         val external = doc.selectFirst("meta[property=og:see_also]")?.attr("content")
             ?: Regex("\"link\":\"(https?:[^\"]+)\"").findAll(page.body).map { it.groupValues[1].replace("\\/", "/") }
                 .firstOrNull { "pinterest" !in it }
@@ -279,7 +279,7 @@ class LinkImporter(private val gemini: () -> GeminiClient?) {
             }
         }
         val src = fromDoc(page.finalUrl, doc)
-        // Текст статьи — для разбора без разметки
+        // Article text, for pages without structured markup
         val main = doc.selectFirst("article, main, [itemprop=recipeInstructions], .recipe, #recipe") ?: doc.body()
         main.select("script, style, nav, header, footer, aside, form, noscript, iframe").remove()
         val body = textWithBreaks(main).lines().map { it.trim() }.filter { it.isNotEmpty() }.joinToString("\n").take(20000)

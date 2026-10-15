@@ -4,7 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.mutableStateOf
@@ -17,7 +17,7 @@ sealed interface Shared {
     data class Image(val uri: Uri) : Shared
 }
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
     private val shared = mutableStateOf<Shared?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {

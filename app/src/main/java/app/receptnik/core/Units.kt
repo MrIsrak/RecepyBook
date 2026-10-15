@@ -57,7 +57,35 @@ object Units {
     fun normalizeAlias(s: String): String =
         s.lowercase().replace(".", "").replace(Regex("\\s+"), " ").trim()
 
-    fun display(key: String?): String = byKey(key)?.display ?: (key ?: "")
+    private val labels: Map<String, Triple<String, String, String>> = mapOf(
+        "mg" to Triple("мг", "mg", "מ\"ג"),
+        "g" to Triple("г", "g", "גר׳"),
+        "kg" to Triple("кг", "kg", "ק\"ג"),
+        "oz" to Triple("унц.", "oz", "אונ׳"),
+        "lb" to Triple("фунт", "lb", "ליברה"),
+        "ml" to Triple("мл", "ml", "מ\"ל"),
+        "l" to Triple("л", "l", "ליטר"),
+        "tsp" to Triple("ч. л.", "tsp", "כפית"),
+        "tbsp" to Triple("ст. л.", "tbsp", "כף"),
+        "glass" to Triple("стак.", "glass", "כוס"),
+        "cup" to Triple("чашк.", "cup", "כוס"),
+        "floz" to Triple("fl oz", "fl oz", "fl oz"),
+        "pinch" to Triple("щеп.", "pinch", "קורט"),
+        "piece" to Triple("шт.", "pc", "יח׳"),
+        "clove" to Triple("зуб.", "clove", "שן"),
+        "can" to Triple("банка", "can", "קופסה"),
+        "pack" to Triple("уп.", "pack", "חבילה"),
+        "slice" to Triple("ломт.", "slice", "פרוסה"),
+        "bunch" to Triple("пучок", "bunch", "צרור"),
+        "handful" to Triple("горсть", "handful", "חופן"),
+        "sprig" to Triple("веточка", "sprig", "ענף"),
+    )
+
+    /** Подпись единицы на языке интерфейса: lang = "ru" | "en" | "he". */
+    fun display(key: String?, lang: String = "ru"): String {
+        val t = key?.let { labels[it] } ?: return key ?: ""
+        return when (Lang.of(lang)) { "en" -> t.second; "he" -> t.third; else -> t.first }
+    }
 
     /** Пересчёт количества в выбранную систему единиц. */
     fun convert(quantity: Double?, unitKey: String?, system: UnitSystem): Pair<Double?, String?> {
@@ -108,7 +136,7 @@ object QtyFormat {
     )
 
     /** 1.5 → "1½", 0.333 → "⅓", 212.7 → "213", 2.25 → "2¼", 1.15 → "1,15". */
-    fun format(q: Double): String {
+    fun format(q: Double, lang: String = "ru"): String {
         if (q <= 0) return "0"
         if (q >= 20) return q.roundToInt().toString()
         val whole = floor(q)
@@ -120,28 +148,37 @@ object QtyFormat {
         }
         val r = (q * 10).roundToInt() / 10.0
         val str = if (r == floor(r)) r.toInt().toString() else r.toString()
-        return str.replace('.', ',')
+        return if (Lang.of(lang) == "ru") str.replace('.', ',') else str
     }
 
     /** Количество с единицей: «2–3 ст. л.», «400 г», "" если количества нет. */
-    fun formatAmount(ing: Ingredient, factor: Double, system: UnitSystem): String {
+    fun formatAmount(ing: Ingredient, factor: Double, system: UnitSystem, lang: String = "ru"): String {
         if (ing.isHeader || ing.quantity == null) return ing.note ?: ""
         val (q, u) = Units.convert(ing.quantity * factor, ing.unit, system)
         val (qMax, _) = Units.convert(ing.quantityMax?.let { it * factor }, ing.unit, system)
         val qs = buildString {
-            append(format(q ?: 0.0))
-            if (qMax != null) append("–").append(format(qMax))
+            append(format(q ?: 0.0, lang))
+            if (qMax != null) append("–").append(format(qMax, lang))
         }
-        return listOf(qs, Units.display(u)).filter { it.isNotBlank() }.joinToString(" ")
+        return listOf(qs, Units.display(u, lang)).filter { it.isNotBlank() }.joinToString(" ")
     }
 
     fun displayName(ing: Ingredient): String =
         ing.name.ifBlank { ing.original }.replaceFirstChar { it.uppercaseChar() }
 
     /** «Творог — 400 г» — для списков и «Поделиться». */
-    fun formatIngredient(ing: Ingredient, factor: Double, system: UnitSystem): String {
+    fun formatIngredient(ing: Ingredient, factor: Double, system: UnitSystem, lang: String = "ru"): String {
         if (ing.isHeader) return ing.original
-        val amount = formatAmount(ing, factor, system)
+        val amount = formatAmount(ing, factor, system, lang)
         return if (amount.isBlank()) displayName(ing) else "${displayName(ing)} — $amount"
+    }
+}
+
+/** Нормализация кода языка: iw → he, всё неизвестное → en. */
+object Lang {
+    fun of(code: String?): String = when (code?.lowercase()?.take(2)) {
+        "ru", "uk", "be" -> "ru"
+        "he", "iw" -> "he"
+        else -> "en"
     }
 }

@@ -3,8 +3,12 @@ package app.receptnik.ui
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,21 +16,21 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -41,9 +45,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.core.os.LocaleListCompat
+import app.receptnik.BuildConfig
+import app.receptnik.R
 import app.receptnik.core.UnitSystem
 import app.receptnik.data.AppSettings
 import kotlinx.coroutines.Dispatchers
@@ -51,6 +59,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(onBack: () -> Unit) {
     val c = rememberContainer()
@@ -62,16 +71,22 @@ fun SettingsScreen(onBack: () -> Unit) {
     var model by remember { mutableStateOf(s.geminiModel) }
     var showKey by remember { mutableStateOf(false) }
     var pendingRestore by remember { mutableStateOf<String?>(null) }
-
     LaunchedEffect(s.geminiKey, s.geminiModel) { key = s.geminiKey; model = s.geminiModel }
+
+    val msgSaved = stringResource(R.string.saved)
+    val msgBackupSaved = stringResource(R.string.backup_saved)
+    val msgReadFail = stringResource(R.string.cannot_read_file)
+    val msgErrorTpl = stringResource(R.string.error_with)
+    val msgRestoredTpl = stringResource(R.string.restored_n)
+    val msgBadFileTpl = stringResource(R.string.bad_backup)
 
     val exporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { dest ->
         if (dest != null) scope.launch {
             runCatching {
                 val json = c.repo.exportJson()
                 withContext(Dispatchers.IO) { ctx.contentResolver.openOutputStream(dest)?.use { it.write(json.toByteArray()) } }
-            }.onSuccess { Toast.makeText(ctx, "Копия сохранена", Toast.LENGTH_SHORT).show() }
-                .onFailure { Toast.makeText(ctx, "Ошибка: ${it.message}", Toast.LENGTH_LONG).show() }
+            }.onSuccess { Toast.makeText(ctx, msgBackupSaved, Toast.LENGTH_SHORT).show() }
+                .onFailure { Toast.makeText(ctx, String.format(msgErrorTpl, it.message), Toast.LENGTH_LONG).show() }
         }
     }
     val importer = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { src ->
@@ -79,107 +94,124 @@ fun SettingsScreen(onBack: () -> Unit) {
             pendingRestore = withContext(Dispatchers.IO) {
                 runCatching { ctx.contentResolver.openInputStream(src)?.use { String(it.readBytes()) } }.getOrNull()
             }
-            if (pendingRestore == null) Toast.makeText(ctx, "Не удалось прочитать файл", Toast.LENGTH_SHORT).show()
+            if (pendingRestore == null) Toast.makeText(ctx, msgReadFail, Toast.LENGTH_SHORT).show()
         }
     }
 
-    AppScaffold(title = "Настройки", onBack = onBack) { mod ->
+    AppScaffold(title = stringResource(R.string.settings), onBack = onBack) { mod ->
         Column(
-            mod.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            mod.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Text("Умный разбор (ИИ)", style = MaterialTheme.typography.titleLarge)
-            Text(
-                "Без ключа рецепты разбираются встроенным парсером — он понимает подписи со списком ингредиентов. " +
-                    "С бесплатным ключом Google Gemini приложение разберёт любой пост, видео-описание или фото, " +
-                    "переведёт рецепт и оценит калорийность. Ключ хранится только на телефоне.",
-                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Card {
-                Column(Modifier.padding(12.dp)) {
-                    Text("Как получить ключ (2 минуты, бесплатно):", style = MaterialTheme.typography.titleSmall)
-                    Text(
-                        "1. Открой aistudio.google.com/apikey и войди Google-аккаунтом\n" +
-                            "2. Нажми «Create API key»\n3. Скопируй ключ и вставь ниже",
-                        style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp),
-                    )
-                    TextButton(onClick = { runCatching { uri.openUri("https://aistudio.google.com/apikey") } }) { Text("Открыть сайт") }
+            // ── Язык ──
+            SectionLabel(stringResource(R.string.language), Modifier.padding(top = 8.dp))
+            val current = remember { mutableStateOf(AppCompatDelegate.getApplicationLocales().toLanguageTags().take(2)) }
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("" to stringResource(R.string.lang_system), "en" to "English", "ru" to "Русский", "iw" to "עברית").forEach { (tag, label) ->
+                    val selected = current.value == tag || (tag == "iw" && current.value == "he")
+                    Pill(label, selected = selected, onClick = {
+                        current.value = tag
+                        AppCompatDelegate.setApplicationLocales(
+                            if (tag.isEmpty()) LocaleListCompat.getEmptyLocaleList() else LocaleListCompat.forLanguageTags(tag)
+                        )
+                    })
                 }
             }
+
+            Hairline(Modifier.padding(vertical = 10.dp))
+
+            // ── Единицы ──
+            SectionLabel(stringResource(R.string.default_units))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(UnitSystem.ORIGINAL to R.string.units_original, UnitSystem.METRIC to R.string.units_metric, UnitSystem.US to R.string.units_us)
+                    .forEach { (u, t) -> Pill(stringResource(t), selected = s.units == u, onClick = { scope.launch { c.settingsStore.update { it.copy(units = u) } } }) }
+            }
+
+            Hairline(Modifier.padding(vertical = 10.dp))
+
+            // ── ИИ ──
+            SectionLabel(stringResource(R.string.smart_parsing))
+            Text(stringResource(R.string.smart_parsing_text), style = MaterialTheme.typography.bodyMedium, color = muted)
+            Notice(stringResource(R.string.how_to_get_key), action = stringResource(R.string.open_site)) {
+                runCatching { uri.openUri("https://aistudio.google.com/apikey") }
+            }
             OutlinedTextField(
-                key, { key = it.trim() }, label = { Text("Ключ Gemini API") }, singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
+                key, { key = it.trim() }, label = { Text(stringResource(R.string.gemini_key)) }, singleLine = true,
+                modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), colors = softFieldColors(),
                 visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
                     IconButton(onClick = { showKey = !showKey }) {
-                        Icon(if (showKey) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility, "Показать")
+                        Icon(if (showKey) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility, stringResource(R.string.show))
                     }
                 },
             )
             OutlinedTextField(
-                model, { model = it.trim() }, label = { Text("Модель") }, singleLine = true,
-                supportingText = { Text("По умолчанию ${AppSettings.DEFAULT_MODEL}. Если Google переименует модель — впиши новое имя.") },
-                modifier = Modifier.fillMaxWidth(),
+                model, { model = it.trim() }, label = { Text(stringResource(R.string.model)) }, singleLine = true,
+                supportingText = { Text(stringResource(R.string.model_hint, AppSettings.DEFAULT_MODEL)) },
+                modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), colors = softFieldColors(),
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Переводить рецепты на русский", modifier = Modifier.weight(1f))
-                Switch(checked = s.translateToRussian, onCheckedChange = { v -> scope.launch { c.settingsStore.update { it.copy(translateToRussian = v) } } })
+                Text(stringResource(R.string.translate_recipes), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                Switch(
+                    checked = s.translateRecipes,
+                    onCheckedChange = { v -> scope.launch { c.settingsStore.update { it.copy(translateRecipes = v) } } },
+                    colors = SwitchDefaults.colors(checkedTrackColor = Accent),
+                )
             }
             Button(
                 onClick = {
                     scope.launch {
                         c.settingsStore.update { it.copy(geminiKey = key, geminiModel = model.ifBlank { AppSettings.DEFAULT_MODEL }) }
-                        Toast.makeText(ctx, "Сохранено", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(ctx, msgSaved, Toast.LENGTH_SHORT).show()
                     }
                 },
-                enabled = key != s.geminiKey || model != s.geminiModel,
-            ) { Text("Сохранить ключ") }
+                enabled = key != s.geminiKey || model != s.geminiModel, shape = CircleShape, modifier = Modifier.height(48.dp),
+            ) { Text(stringResource(R.string.save_key)) }
 
-            HorizontalDivider(Modifier.padding(vertical = 8.dp))
-            Text("Единицы измерения по умолчанию", style = MaterialTheme.typography.titleLarge)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(UnitSystem.ORIGINAL to "Как в рецепте", UnitSystem.METRIC to "Граммы/мл", UnitSystem.US to "US").forEach { (u, t) ->
-                    FilterChip(selected = s.units == u, onClick = { scope.launch { c.settingsStore.update { it.copy(units = u) } } }, label = { Text(t) })
+            Hairline(Modifier.padding(vertical = 10.dp))
+
+            // ── Резервная копия ──
+            SectionLabel(stringResource(R.string.backup))
+            Text(stringResource(R.string.backup_text), style = MaterialTheme.typography.bodyMedium, color = muted)
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Button(onClick = { exporter.launch("recepybook-${LocalDate.now()}.json") }, shape = CircleShape, modifier = Modifier.height(48.dp)) {
+                    Text(stringResource(R.string.save_backup))
                 }
+                OutlinedButton(
+                    onClick = { importer.launch(arrayOf("application/json", "text/plain", "*/*")) },
+                    shape = CircleShape, border = BorderStroke(1.dp, hairline), modifier = Modifier.height(48.dp),
+                ) { Text(stringResource(R.string.restore)) }
             }
 
-            HorizontalDivider(Modifier.padding(vertical = 8.dp))
-            Text("Резервная копия", style = MaterialTheme.typography.titleLarge)
+            Hairline(Modifier.padding(vertical = 10.dp))
             Text(
-                "Все рецепты, книги, план и покупки хранятся только на телефоне. Сохрани копию в файл (например, на Google Диск), " +
-                    "чтобы перенести на другой телефон.",
-                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                stringResource(R.string.about_line, BuildConfig.VERSION_NAME),
+                style = MaterialTheme.typography.bodySmall, color = muted,
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(onClick = { exporter.launch("receptnik-${LocalDate.now()}.json") }) { Text("Сохранить копию") }
-                OutlinedButton(onClick = { importer.launch(arrayOf("application/json", "text/plain", "*/*")) }) { Text("Восстановить") }
+            TextButton(onClick = { runCatching { uri.openUri("https://github.com/MrIsrak/RecepyBook") } }) {
+                Text("github.com/MrIsrak/RecepyBook", color = Accent)
             }
-
-            HorizontalDivider(Modifier.padding(vertical = 8.dp))
-            Text(
-                "Рецептник ${app.receptnik.BuildConfig.VERSION_NAME} — бесплатно, без рекламы и подписок.\ngithub.com/MrIsrak/RecepyBook",
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(32.dp))
         }
     }
 
     pendingRestore?.let { text ->
         AlertDialog(
             onDismissRequest = { pendingRestore = null },
-            title = { Text("Восстановить из копии?") },
-            text = { Text("Текущие рецепты, книги, план и список покупок будут заменены данными из файла.") },
+            containerColor = MaterialTheme.colorScheme.background,
+            title = { Text(stringResource(R.string.restore_q)) },
+            text = { Text(stringResource(R.string.restore_text)) },
             confirmButton = {
                 TextButton(onClick = {
                     pendingRestore = null
                     scope.launch {
                         runCatching { c.repo.importJson(text) }
-                            .onSuccess { Toast.makeText(ctx, "Восстановлено рецептов: $it", Toast.LENGTH_SHORT).show() }
-                            .onFailure { Toast.makeText(ctx, "Файл не подходит: ${it.message}", Toast.LENGTH_LONG).show() }
+                            .onSuccess { Toast.makeText(ctx, String.format(msgRestoredTpl, it), Toast.LENGTH_SHORT).show() }
+                            .onFailure { Toast.makeText(ctx, String.format(msgBadFileTpl, it.message), Toast.LENGTH_LONG).show() }
                     }
-                }) { Text("Восстановить") }
+                }) { Text(stringResource(R.string.restore)) }
             },
-            dismissButton = { TextButton(onClick = { pendingRestore = null }) { Text("Отмена") } },
+            dismissButton = { TextButton(onClick = { pendingRestore = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 }

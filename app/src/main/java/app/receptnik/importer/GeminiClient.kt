@@ -22,7 +22,8 @@ import java.net.URLEncoder
  * Необязательный «умный» разбор через Google Gemini (у Google есть бесплатный тариф:
  * ключ берётся на aistudio.google.com). Без ключа приложение работает на встроенном парсере.
  */
-class GeminiClient(private val apiKey: String, private val model: String, private val translateToRussian: Boolean) {
+/** [targetLanguage] — язык, на который переводить рецепт (например "Russian"), или null, чтобы сохранить оригинал. */
+class GeminiClient(private val apiKey: String, private val model: String, private val targetLanguage: String?) {
 
     @Serializable
     private data class GNutrition(val kcal: Double = 0.0, val protein: Double = 0.0, val fat: Double = 0.0, val carbs: Double = 0.0)
@@ -45,20 +46,20 @@ class GeminiClient(private val apiKey: String, private val model: String, privat
     private val json = Json { ignoreUnknownKeys = true; isLenient = true; coerceInputValues = true }
 
     private fun prompt(): String = buildString {
-        append("Ты помощник кулинарного приложения. Извлеки рецепт из присланного материала ")
-        append("(подпись к посту из соцсети, описание видео, текст страницы или фото рецепта). ")
-        if (translateToRussian) append("Пиши всё на русском языке (переведи, если рецепт на другом языке). ")
-        else append("Сохраняй язык оригинала. ")
-        append("Верни ТОЛЬКО JSON такого вида: ")
-        append("{\"isRecipe\":true,\"title\":\"\",\"description\":\"1-2 предложения\",\"servings\":2,\"totalTimeMin\":30,")
-        append("\"ingredients\":[\"200 г муки\",\"2 шт. яйца\",\"соль по вкусу\"],")
-        append("\"steps\":[\"Шаг 1...\",\"Шаг 2...\"],")
+        append("You are the assistant of a cooking app. Extract the recipe from the provided material ")
+        append("(a social media caption, a video description, page text or a photo of a recipe). ")
+        if (targetLanguage != null) append("Write everything in $targetLanguage (translate if the recipe is in another language). ")
+        else append("Keep the original language. ")
+        append("Return ONLY JSON of this shape: ")
+        append("{\"isRecipe\":true,\"title\":\"\",\"description\":\"1-2 sentences\",\"servings\":2,\"totalTimeMin\":30,")
+        append("\"ingredients\":[\"200 g flour\",\"2 eggs\",\"salt to taste\"],")
+        append("\"steps\":[\"Step 1...\",\"Step 2...\"],")
         append("\"nutritionPerServing\":{\"kcal\":0,\"protein\":0,\"fat\":0,\"carbs\":0},")
-        append("\"cuisine\":\"итальянская\",\"mealType\":\"завтрак|обед|ужин|перекус|десерт|напиток\",\"tags\":[\"быстро\"]}. ")
-        append("Каждый ингредиент — строкой в формате «количество единица продукт» с метрическими единицами где возможно. ")
-        append("Если количества не указаны — оцени разумные. Шаги — короткие и понятные. ")
-        append("Калорийность и БЖУ на одну порцию — оцени по ингредиентам. ")
-        append("Если это не рецепт — верни {\"isRecipe\":false}.")
+        append("\"cuisine\":\"\",\"mealType\":\"breakfast|lunch|dinner|snack|dessert|drink (in the output language)\",\"tags\":[]}. ")
+        append("Each ingredient is one string: quantity, unit, product — metric units where possible. ")
+        append("If quantities are missing, estimate reasonable ones. Steps must be short and clear. ")
+        append("Estimate calories and macros per serving from the ingredients. ")
+        append("If this is not a recipe, return {\"isRecipe\":false}.")
     }
 
     suspend fun extract(text: String?, imageBytes: ByteArray? = null, imageMime: String = "image/jpeg"): RecipeDraft? {
@@ -89,7 +90,7 @@ class GeminiClient(private val apiKey: String, private val model: String, privat
             val msg = runCatching {
                 json.parseToJsonElement(resp).jsonObject["error"]?.jsonObject?.get("message")?.jsonPrimitive?.content
             }.getOrNull()
-            throw IOException("Gemini: ${msg ?: "ошибка $code"}")
+            throw IOException("Gemini: ${msg ?: "HTTP $code"}")
         }
         val root = json.parseToJsonElement(resp).jsonObject
         val textOut = root["candidates"]?.jsonArray?.firstOrNull()?.jsonObject
@@ -110,7 +111,7 @@ class GeminiClient(private val apiKey: String, private val model: String, privat
             nutrition = g.nutritionPerServing?.takeIf { it.kcal > 0 }?.let {
                 Nutrition(it.kcal, it.protein, it.fat, it.carbs) * servings.toDouble()
             },
-            nutritionNote = "Оценка ИИ",
+            nutritionNote = NutritionNote.AI,
             tags = g.tags.take(8),
             cuisine = g.cuisine,
             mealType = g.mealType?.substringBefore('|'),

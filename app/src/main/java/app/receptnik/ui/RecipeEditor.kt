@@ -5,6 +5,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.res.stringResource
+import app.receptnik.R
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -99,53 +102,37 @@ class EditorState {
 
 @Composable
 fun RecipeEditorFields(s: EditorState, modifier: Modifier = Modifier) {
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        OutlinedTextField(
-            s.title, { s.title = it }, label = { Text("Название") }, modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedTextField(
-                s.servings, { v -> s.servings = v.filter { it.isDigit() }.take(3) }, label = { Text("Порций") },
-                modifier = Modifier.weight(1f), singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            )
-            OutlinedTextField(
-                s.time, { v -> s.time = v.filter { it.isDigit() }.take(4) }, label = { Text("Время, мин") },
-                modifier = Modifier.weight(1f), singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            )
+    val cap = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
+    val num = KeyboardOptions(keyboardType = KeyboardType.Number)
+    val shape = RoundedCornerShape(18.dp)
+    val colors = softFieldColors()
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        OutlinedTextField(s.title, { s.title = it }, label = { Text(stringResource(R.string.f_title)) },
+            modifier = Modifier.fillMaxWidth(), keyboardOptions = cap, shape = shape, colors = colors)
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedTextField(s.servings, { v -> s.servings = v.filter { it.isDigit() }.take(3) }, label = { Text(stringResource(R.string.servings)) },
+                modifier = Modifier.weight(1f), singleLine = true, keyboardOptions = num, shape = shape, colors = colors)
+            OutlinedTextField(s.time, { v -> s.time = v.filter { it.isDigit() }.take(4) }, label = { Text(stringResource(R.string.f_time)) },
+                modifier = Modifier.weight(1f), singleLine = true, keyboardOptions = num, shape = shape, colors = colors)
         }
-        OutlinedTextField(
-            s.ingredients, { s.ingredients = it }, label = { Text("Ингредиенты — по одному на строку") },
-            placeholder = { Text("200 г муки\n2 яйца\nСоль по вкусу\nДля соуса:") },
-            modifier = Modifier.fillMaxWidth(), minLines = 5,
-            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-        )
-        OutlinedTextField(
-            s.steps, { s.steps = it }, label = { Text("Шаги — по одному на строку") },
-            modifier = Modifier.fillMaxWidth(), minLines = 5,
-            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-        )
-        OutlinedTextField(
-            s.description, { s.description = it }, label = { Text("Описание") },
-            modifier = Modifier.fillMaxWidth(), minLines = 2,
-            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedTextField(s.mealType, { s.mealType = it }, label = { Text("Тип блюда") },
-                placeholder = { Text("ужин") }, modifier = Modifier.weight(1f), singleLine = true)
-            OutlinedTextField(s.cuisine, { s.cuisine = it }, label = { Text("Кухня") },
-                placeholder = { Text("итальянская") }, modifier = Modifier.weight(1f), singleLine = true)
+        OutlinedTextField(s.ingredients, { s.ingredients = it }, label = { Text(stringResource(R.string.f_ingredients)) },
+            placeholder = { Text(stringResource(R.string.f_ingredients_hint)) },
+            modifier = Modifier.fillMaxWidth(), minLines = 5, keyboardOptions = cap, shape = shape, colors = colors)
+        OutlinedTextField(s.steps, { s.steps = it }, label = { Text(stringResource(R.string.f_steps)) },
+            modifier = Modifier.fillMaxWidth(), minLines = 5, keyboardOptions = cap, shape = shape, colors = colors)
+        OutlinedTextField(s.description, { s.description = it }, label = { Text(stringResource(R.string.f_description)) },
+            modifier = Modifier.fillMaxWidth(), minLines = 2, keyboardOptions = cap, shape = shape, colors = colors)
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedTextField(s.mealType, { s.mealType = it }, label = { Text(stringResource(R.string.f_meal_type)) },
+                modifier = Modifier.weight(1f), singleLine = true, shape = shape, colors = colors)
+            OutlinedTextField(s.cuisine, { s.cuisine = it }, label = { Text(stringResource(R.string.f_cuisine)) },
+                modifier = Modifier.weight(1f), singleLine = true, shape = shape, colors = colors)
         }
-        OutlinedTextField(s.tags, { s.tags = it }, label = { Text("Теги через запятую") },
-            modifier = Modifier.fillMaxWidth(), singleLine = true)
-        OutlinedTextField(s.notes, { s.notes = it }, label = { Text("Мои заметки") },
-            modifier = Modifier.fillMaxWidth(), minLines = 2)
-        Text(
-            "Калории пересчитаются автоматически по ингредиентам.",
-            style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 8.dp),
-        )
+        OutlinedTextField(s.tags, { s.tags = it }, label = { Text(stringResource(R.string.f_tags)) },
+            modifier = Modifier.fillMaxWidth(), singleLine = true, shape = shape, colors = colors)
+        OutlinedTextField(s.notes, { s.notes = it }, label = { Text(stringResource(R.string.my_notes)) },
+            modifier = Modifier.fillMaxWidth(), minLines = 2, shape = shape, colors = colors)
+        Text(stringResource(R.string.calories_auto), style = MaterialTheme.typography.bodySmall, color = muted,
+            modifier = Modifier.padding(bottom = 8.dp))
     }
 }

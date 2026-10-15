@@ -206,6 +206,16 @@
     <string name="restored_n">Recipes restored: %d</string>
     <string name="bad_backup">This file doesn’t look like a backup: %s</string>
     <string name="about_line">RecepyBook %s — free, no ads, no subscriptions.</string>
+    <string name="stage_reading">Reading the caption…</string>
+    <string name="stage_downloading_video">Downloading the video…</string>
+    <string name="stage_watching_video">Watching the video…</string>
+    <string name="stage_video_hint">The recipe isn\'t in the caption, so AI is extracting it from the video. This can take up to a minute.</string>
+    <string name="from_video_notice">Recipe extracted from the video by AI. Check the quantities before saving.</string>
+    <string name="ai_err_network">Couldn\'t reach Google AI (generativelanguage.googleapis.com). If you use Private DNS, an ad blocker or a VPN, make sure this address isn\'t blocked. The built-in parser was used.</string>
+    <string name="ai_err_key">The Gemini API key was rejected. Check it in Settings.</string>
+    <string name="ai_err_model">The Gemini model was not found. Reset the model name in Settings.</string>
+    <string name="ai_err_quota">The free Gemini quota is used up for now. Try again later.</string>
+    <string name="ai_err_video">AI couldn\'t process this video. The built-in parser was used.</string>
     <plurals name="recipes_count">
         <item quantity="one">%d recipe</item>
         <item quantity="other">%d recipes</item>

@@ -16,9 +16,9 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 /**
- * Рецепт с фото (скриншот, страница кулинарной книги).
- * С ключом Gemini — понимает любой язык, включая русский рукописный текст.
- * Без ключа — встроенное распознавание текста ML Kit (латиница).
+ * Imports a recipe from a photo (screenshot, cookbook page).
+ * With a Gemini key it understands any language, including handwriting.
+ * Without one it uses on-device ML Kit OCR (Latin script only).
  */
 class PhotoImporter(private val context: Context, private val gemini: () -> GeminiClient?, private val links: LinkImporter) {
 
@@ -26,11 +26,9 @@ class PhotoImporter(private val context: Context, private val gemini: () -> Gemi
         val jpeg = withContext(Dispatchers.IO) { loadScaledJpeg(uri) }
         val ai = gemini()
         val warnings = mutableListOf<ImportWarning>()
-        var aiError: String? = null
+        var aiError: AiException? = null
         if (ai != null) {
-            val d = runCatching { ai.extract(null, jpeg, "image/jpeg") }
-                .onFailure { aiError = it.message ?: "Gemini error" }
-                .getOrNull()
+            val d = try { ai.extract(null, jpeg, "image/jpeg") } catch (e: AiException) { aiError = e; null }
             if (d != null) return ImportResult(links.withNutrition(d.copy(imageUrl = uri.toString())))
         }
         val text = recognize(uri)

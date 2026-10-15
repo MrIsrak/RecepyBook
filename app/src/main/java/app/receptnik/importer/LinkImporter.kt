@@ -4,6 +4,8 @@ import app.receptnik.core.CaptionParser
 import app.receptnik.core.NutritionDb
 import app.receptnik.core.RecipeDraft
 import app.receptnik.core.TextUtil
+import app.receptnik.core.VideoLinks
+import java.io.File
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -14,10 +16,10 @@ import org.jsoup.nodes.TextNode
 import java.net.URI
 import java.net.URLEncoder
 
-/** Предупреждения импорта; тексты — в ресурсах интерфейса. */
+/** Import warnings; messages live in UI resources. */
 enum class ImportWarning { NO_INGREDIENTS, NO_INGREDIENTS_WITH_AI, PHOTO_UNREADABLE, PHOTO_NO_RECIPE }
 
-/** Коды пометки о происхождении КБЖУ (сохраняются в рецепте). */
+/** Codes describing where nutrition data came from (stored with the recipe). */
 object NutritionNote {
     const val SITE = "site"
     const val AI = "ai"
@@ -28,11 +30,16 @@ object NutritionNote {
 data class ImportResult(
     val draft: RecipeDraft,
     val warnings: List<ImportWarning> = emptyList(),
-    /** Текст ошибки Gemini, если ИИ не сработал (показывается как есть). */
-    val aiError: String? = null,
+    /** Why AI parsing failed, if it was attempted and failed. */
+    val aiError: AiException? = null,
+    /** True when the recipe was extracted from the video itself. */
+    val fromVideo: Boolean = false,
 )
 
-/** Что удалось вытащить со страницы до разбора на рецепт. */
+/** Progress stages reported to the UI while importing. */
+enum class ImportStage { FETCHING, READING, DOWNLOADING_VIDEO, WATCHING_VIDEO }
+
+/** Raw material extracted from a page before recipe parsing. */
 private data class Source(
     val url: String,
     val text: String = "",
@@ -40,9 +47,14 @@ private data class Source(
     val image: String? = null,
     val author: String? = null,
     val structured: RecipeDraft? = null,
+    /** Direct video file URL, when the page exposes one. */
+    val videoUrl: String? = null,
 )
 
-class LinkImporter(private val gemini: () -> GeminiClient?) {
+/**
+ * Imports a recipe from a link. [cacheDir] holds temporary video downloads for AI video understanding.
+ */
+class LinkImporter(private val gemini: () -> GeminiClient?, private val cacheDir: File) {
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
     enum class Platform { TIKTOK, INSTAGRAM, YOUTUBE, FACEBOOK, PINTEREST, WEB }
@@ -59,11 +71,13 @@ class LinkImporter(private val gemini: () -> GeminiClient?) {
         }
     }
 
-    suspend fun import(input: String): ImportResult {
+    suspend fun import(input: String, onStage: (ImportStage) -> Unit = {}): ImportResult {
         val url = TextUtil.firstUrl(input) ?: throw ImportException(ImportException.Reason.NO_LINK)
         val warnings = mutableListOf<ImportWarning>()
-        var aiError: String? = null
+        var aiError: AiException? = null
+        var fromVideo = false
         val platform = platformOf(url)
+        onStage(ImportStage.FETCHING)
         val src = try {
             when (platform) {
                 Platform.TIKTOK -> tiktok(url)
@@ -76,25 +90,59 @@ class LinkImporter(private val gemini: () -> GeminiClient?) {
         } catch (e: kotlin.coroutines.cancellation.CancellationException) {
             throw e
         } catch (e: Exception) {
-            // Последний шанс: превью ссылки, которое соцсети отдают роботам мессенджеров
+            // Last resort: the link preview social networks serve to messenger crawlers
             runCatching { ogPage(url, Http.UA_BOT) }.getOrNull()?.takeIf { it.text.isNotBlank() }
                 ?: throw if (e is ImportException) e else ImportException(ImportException.Reason.BAD_RESPONSE, e.message)
         }
 
         val ai = gemini()
+        val material = listOfNotNull(src.title, src.text).joinToString("\n\n").trim()
         var parsed: RecipeDraft? = src.structured?.takeIf { it.ingredients.isNotEmpty() }
-        if (parsed == null) {
-            val material = listOfNotNull(src.title, src.text).joinToString("\n\n").trim()
-            if (ai != null && material.isNotBlank()) {
-                parsed = runCatching { ai.extract(material) }
-                    .onFailure { aiError = it.message ?: "Gemini error" }
-                    .getOrNull()
+
+        // 1. AI on the caption text
+        if (parsed == null && ai != null && material.isNotBlank()) {
+            onStage(ImportStage.READING)
+            try { parsed = ai.extract(material) } catch (e: AiException) { aiError = e }
+        }
+        // 2. Built-in parser on the caption text
+        val captionDraft = CaptionParser.parse(src.text, fallbackTitle = src.title)
+        if (parsed == null && captionDraft.ingredients.isNotEmpty()) parsed = captionDraft
+
+        // 3. The recipe is only in the video: let AI watch it
+        val canRetryAi = aiError == null || aiError.reason == AiException.Reason.OTHER
+        if (parsed == null && ai != null && canRetryAi && platform != Platform.WEB && platform != Platform.PINTEREST) {
+            var tmp: File? = null
+            try {
+                if (platform == Platform.YOUTUBE) {
+                    onStage(ImportStage.WATCHING_VIDEO)
+                    parsed = ai.extractFromVideo(null, src.url, material)
+                } else {
+                    val videoUrl = src.videoUrl ?: findVideoUrl(platform, src.url)
+                    if (videoUrl != null) {
+                        onStage(ImportStage.DOWNLOADING_VIDEO)
+                        tmp = File.createTempFile("recipe", ".mp4", cacheDir)
+                        val ok = Http.download(videoUrl, tmp, referer = refererFor(platform))
+                        if (ok) {
+                            onStage(ImportStage.WATCHING_VIDEO)
+                            parsed = ai.extractFromVideo(tmp, null, material)
+                        }
+                    }
+                }
+                fromVideo = parsed != null
+            } catch (e: AiException) {
+                aiError = e
+            } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Video is a best-effort enhancement; caption results still apply
+            } finally {
+                tmp?.delete()
             }
         }
-        val base: RecipeDraft = parsed ?: CaptionParser.parse(src.text, fallbackTitle = src.title)
 
+        val base: RecipeDraft = parsed ?: captionDraft
         val draft = base.copy(
-            title = base.title.ifBlank { src.title?.let { CaptionParser.cleanTitle(it) } ?: "" }
+            title = base.title.ifBlank { src.title?.let { CaptionParser.cleanTitle(TextUtil.stripAuthorPrefix(it)) } ?: "" }
                 .ifBlank { src.author?.let { "@$it" } ?: "" },
             imageUrl = base.imageUrl ?: src.image,
             sourceUrl = src.url,
@@ -104,10 +152,31 @@ class LinkImporter(private val gemini: () -> GeminiClient?) {
         if (draft.ingredients.isEmpty()) {
             warnings += if (ai == null) ImportWarning.NO_INGREDIENTS else ImportWarning.NO_INGREDIENTS_WITH_AI
         }
-        return ImportResult(withNutrition(draft), warnings, aiError)
+        return ImportResult(withNutrition(draft), warnings, aiError, fromVideo)
     }
 
-    /** Считает КБЖУ встроенной таблицей; если покрытие плохое — оставляет оценку сайта/ИИ. */
+    private fun refererFor(p: Platform) = when (p) {
+        Platform.TIKTOK -> "https://www.tiktok.com/"
+        Platform.INSTAGRAM -> "https://www.instagram.com/"
+        Platform.FACEBOOK -> "https://www.facebook.com/"
+        else -> null
+    }
+
+    /** Looks up a direct video URL for platforms that do not expose it in the first response. */
+    private suspend fun findVideoUrl(platform: Platform, url: String): String? = when (platform) {
+        Platform.TIKTOK -> {
+            // Loading the page also sets the cookies the video CDN requires
+            val page = runCatching { Http.getWithRetry(url, Http.UA_DESKTOP, attempts = 2) }.getOrNull()
+            page?.let { tiktokEmbedded(Jsoup.parse(it.body, it.finalUrl))?.videoUrl }
+        }
+        Platform.INSTAGRAM, Platform.FACEBOOK -> {
+            val page = runCatching { Http.get(url, Http.UA_BOT) }.getOrNull()
+            page?.let { VideoLinks.fromHtml(it.body) }
+        }
+        else -> null
+    }
+
+    /** Computes nutrition from the built-in table; keeps the site/AI estimate when coverage is poor. */
     fun withNutrition(draft: RecipeDraft): RecipeDraft {
         val r = NutritionDb.calculate(draft.ingredients)
         if (r.considered == 0) return draft
@@ -119,11 +188,11 @@ class LinkImporter(private val gemini: () -> GeminiClient?) {
         ) else draft
     }
 
-    // ---------- Платформы ----------
+    // ---------- Platforms ----------
 
     /**
-     * TikTok: 1) раскрываем короткую ссылку; 2) oEmbed (подпись целиком);
-     * 3) если oEmbed ограничен (429) — данные со страницы видео; 4) og-теги.
+     * TikTok: 1) expand the short link; 2) oEmbed (full caption);
+     * 3) if oEmbed is rate-limited (429), embedded page data; 4) og: tags.
      */
     private suspend fun tiktok(url: String): Source {
         val full = runCatching { Http.resolve(url) }.getOrDefault(url)
@@ -147,7 +216,7 @@ class LinkImporter(private val gemini: () -> GeminiClient?) {
             firstError = e
         }
 
-        // 2. Страница видео: встроенные данные (__UNIVERSAL_DATA_FOR_REHYDRATION__ / SIGI_STATE) и og-теги
+        // 2. Video page: embedded data (__UNIVERSAL_DATA_FOR_REHYDRATION__ / SIGI_STATE) and og: tags
         for (ua in listOf(Http.UA_DESKTOP, Http.UA_BOT)) {
             val page = runCatching { Http.getWithRetry(canonical, ua, attempts = 2) }.getOrNull() ?: continue
             val doc = Jsoup.parse(page.body, page.finalUrl)
@@ -165,7 +234,7 @@ class LinkImporter(private val gemini: () -> GeminiClient?) {
         val root = runCatching { json.parseToJsonElement(raw) }.getOrNull() ?: return null
         val item = findItemStruct(root) ?: return null
         val desc = (item["desc"] as? kotlinx.serialization.json.JsonPrimitive)?.content.orEmpty()
-        if (desc.isBlank()) return null
+        if (desc.isBlank() && item["video"] == null) return null
         val author = (item["author"] as? kotlinx.serialization.json.JsonObject)?.get("uniqueId")
             ?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.content }
             ?: (item["author"] as? kotlinx.serialization.json.JsonPrimitive)?.content
@@ -174,10 +243,15 @@ class LinkImporter(private val gemini: () -> GeminiClient?) {
                 (v[k] as? kotlinx.serialization.json.JsonPrimitive)?.content?.takeIf { it.startsWith("http") }
             }
         }
-        return Source(url = "", text = desc, image = cover, author = author)
+        val video = (item["video"] as? kotlinx.serialization.json.JsonObject)?.let { v ->
+            listOf("playAddr", "downloadAddr").firstNotNullOfOrNull { k ->
+                (v[k] as? kotlinx.serialization.json.JsonPrimitive)?.content?.takeIf { it.startsWith("http") }
+            }
+        }
+        return Source(url = "", text = desc, image = cover, author = author, videoUrl = video)
     }
 
-    /** Ищет объект видео (с полями desc и id) в любом месте JSON. */
+    /** Finds the video object (with desc and id fields) anywhere in the JSON. */
     private fun findItemStruct(el: kotlinx.serialization.json.JsonElement, depth: Int = 0): kotlinx.serialization.json.JsonObject? {
         if (depth > 8) return null
         return when (el) {
@@ -195,9 +269,11 @@ class LinkImporter(private val gemini: () -> GeminiClient?) {
         var text = ""
         var image: String? = null
         var author: String? = null
+        var video: String? = null
         if (code != null) {
             runCatching {
                 val page = Http.get("https://www.instagram.com/p/$code/embed/captioned/", Http.UA_DESKTOP)
+                video = VideoLinks.fromHtml(page.body)
                 val doc = Jsoup.parse(page.body, page.finalUrl)
                 doc.selectFirst(".Caption")?.let { cap ->
                     author = cap.selectFirst(".CaptionUsername")?.text()
@@ -215,10 +291,11 @@ class LinkImporter(private val gemini: () -> GeminiClient?) {
             text = text,
             image = image ?: og?.image,
             author = author ?: og?.author,
+            videoUrl = video ?: og?.videoUrl,
         )
     }
 
-    /** «1 234 likes, 56 comments - user on May 5, 2026: "Подпись..."» → «Подпись...». */
+    /** "1,234 likes, 56 comments - user on May 5, 2026: \"Caption...\"" → "Caption...". */
     private fun cleanInstagramOg(desc: String, title: String?): String {
         fun strip(s: String): String {
             val idx = s.indexOf(": \"").takeIf { it in 0..200 } ?: s.indexOf(": “").takeIf { it in 0..200 }
@@ -258,7 +335,7 @@ class LinkImporter(private val gemini: () -> GeminiClient?) {
     private suspend fun pinterest(url: String): Source {
         val page = Http.getWithRetry(url, Http.UA_DESKTOP)
         val doc = Jsoup.parse(page.body, page.finalUrl)
-        // Пин обычно ведёт на сайт с рецептом — импортируем оттуда
+        // A pin usually links to the recipe website; import from there
         val external = doc.selectFirst("meta[property=og:see_also]")?.attr("content")
             ?: Regex("\"link\":\"(https?:[^\"]+)\"").findAll(page.body).map { it.groupValues[1].replace("\\/", "/") }
                 .firstOrNull { "pinterest" !in it }
@@ -279,7 +356,7 @@ class LinkImporter(private val gemini: () -> GeminiClient?) {
             }
         }
         val src = fromDoc(page.finalUrl, doc)
-        // Текст статьи — для разбора без разметки
+        // Article text, for pages without structured markup
         val main = doc.selectFirst("article, main, [itemprop=recipeInstructions], .recipe, #recipe") ?: doc.body()
         main.select("script, style, nav, header, footer, aside, form, noscript, iframe").remove()
         val body = textWithBreaks(main).lines().map { it.trim() }.filter { it.isNotEmpty() }.joinToString("\n").take(20000)
@@ -293,10 +370,11 @@ class LinkImporter(private val gemini: () -> GeminiClient?) {
 
     private fun fromDoc(url: String, doc: Document): Source = Source(
         url = og(doc, "og:url")?.takeIf { it.startsWith("http") } ?: url,
-        text = og(doc, "og:description") ?: doc.selectFirst("meta[name=description]")?.attr("content") ?: "",
+        text = TextUtil.stripAuthorPrefix(og(doc, "og:description") ?: doc.selectFirst("meta[name=description]")?.attr("content") ?: ""),
         title = og(doc, "og:title") ?: doc.title(),
         image = og(doc, "og:image"),
         author = doc.selectFirst("meta[name=author]")?.attr("content"),
+        videoUrl = VideoLinks.fromHtml(doc.outerHtml()),
     )
 
     private fun og(doc: Document, prop: String): String? =

@@ -94,7 +94,7 @@ fun CookbooksScreen(nav: NavHostController) {
             items(list, key = { it.id }) { b ->
                 val inBook = links.filter { it.cookbookId == b.id }.mapNotNull { byId[it.recipeId] }
                 Column(Modifier.clip(RoundedCornerShape(22.dp)).clickable { nav.navigate(Routes.cookbook(b.id)) }) {
-                    // Обложка: мозаика из двух первых фото
+                    // Cover: mosaic of the first two photos
                     val covers = inBook.mapNotNull { it.image }.take(2)
                     Row(Modifier.fillMaxWidth().aspectRatio(1.1f).clip(RoundedCornerShape(22.dp)), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                         if (covers.isEmpty()) {

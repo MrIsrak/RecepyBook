@@ -1,25 +1,29 @@
-## Что сделано
+## Summary
 
-<!-- Коротко: что и зачем. Ссылка на задачу: Closes #123 -->
+<!-- What does this change do and why? Link the issue: "Closes #123". -->
 
-## Тип изменения
+## Type of change
 
-- [ ] Исправление ошибки
-- [ ] Новая возможность
-- [ ] Рефакторинг / техническое
-- [ ] Документация
+- [ ] Bug fix
+- [ ] New feature
+- [ ] Refactoring / internal
+- [ ] Documentation
+- [ ] Build / CI
 
-## Проверка
+## How was this tested?
 
-- [ ] `./gradlew testDebugUnitTest` проходит
-- [ ] Проверено на устройстве / эмуляторе (Android ___)
-- [ ] Для импорта: проверено на реальных ссылках (какие?)
+- [ ] `./gradlew testDebugUnitTest` passes
+- [ ] Verified on a device or emulator (Android version: ___)
+- [ ] For import changes: verified against real links (list them below)
+- [ ] For UI changes: checked in light and dark themes and in a right-to-left language (Hebrew)
 
-## Скриншоты
+## Screenshots
 
-<!-- Для изменений интерфейса — до/после -->
+<!-- Before / after, for UI changes. -->
 
-## Чек-лист
+## Checklist
 
-- [ ] Запись в `CHANGELOG.md` в разделе «Unreleased»
-- [ ] Нет секретов, ключей и личных данных в коде
+- [ ] An entry is added to `CHANGELOG.md` under `[Unreleased]`
+- [ ] New user-facing strings exist in `values`, `values-ru` and `values-iw`
+- [ ] Documentation is updated where relevant
+- [ ] No secrets, keys or personal data are committed

@@ -103,7 +103,7 @@ fun SettingsScreen(onBack: () -> Unit) {
             mod.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            // ── Язык ──
+            // ── Language ──
             SectionLabel(stringResource(R.string.language), Modifier.padding(top = 8.dp))
             val current = remember { mutableStateOf(AppCompatDelegate.getApplicationLocales().toLanguageTags().take(2)) }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -120,7 +120,7 @@ fun SettingsScreen(onBack: () -> Unit) {
 
             Hairline(Modifier.padding(vertical = 10.dp))
 
-            // ── Единицы ──
+            // ── Units ──
             SectionLabel(stringResource(R.string.default_units))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(UnitSystem.ORIGINAL to R.string.units_original, UnitSystem.METRIC to R.string.units_metric, UnitSystem.US to R.string.units_us)
@@ -129,7 +129,7 @@ fun SettingsScreen(onBack: () -> Unit) {
 
             Hairline(Modifier.padding(vertical = 10.dp))
 
-            // ── ИИ ──
+            // ── AI ──
             SectionLabel(stringResource(R.string.smart_parsing))
             Text(stringResource(R.string.smart_parsing_text), style = MaterialTheme.typography.bodyMedium, color = muted)
             Notice(stringResource(R.string.how_to_get_key), action = stringResource(R.string.open_site)) {
@@ -170,7 +170,7 @@ fun SettingsScreen(onBack: () -> Unit) {
 
             Hairline(Modifier.padding(vertical = 10.dp))
 
-            // ── Резервная копия ──
+            // ── Backup ──
             SectionLabel(stringResource(R.string.backup))
             Text(stringResource(R.string.backup_text), style = MaterialTheme.typography.bodyMedium, color = muted)
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {

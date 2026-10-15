@@ -113,7 +113,7 @@ fun RecipeDetailScreen(id: Long, nav: NavHostController) {
 
     Scaffold(containerColor = MaterialTheme.colorScheme.background, snackbarHost = { SnackbarHost(snackbar) }) { pad ->
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = pad.calculateBottomPadding() + 40.dp)) {
-            // ── Обложка с кнопками поверх ──
+            // ── Cover image with overlay buttons ──
             item {
                 Box {
                     RecipeImage(
@@ -158,7 +158,7 @@ fun RecipeDetailScreen(id: Long, nav: NavHostController) {
                 }
             }
 
-            // ── Заголовок ──
+            // ── Header ──
             item {
                 Column(Modifier.padding(start = 24.dp, end = 24.dp, top = 24.dp)) {
                     r.sourceUrl?.let { src ->
@@ -198,7 +198,7 @@ fun RecipeDetailScreen(id: Long, nav: NavHostController) {
                 }
             }
 
-            // ── Ингредиенты ──
+            // ── Ingredients ──
             item {
                 Column(Modifier.padding(start = 24.dp, end = 24.dp, top = 36.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -256,7 +256,7 @@ fun RecipeDetailScreen(id: Long, nav: NavHostController) {
                 }
             }
 
-            // ── Пищевая ценность ──
+            // ── Nutrition ──
             r.nutrition?.takeIf { it.kcal > 0 }?.let { n ->
                 item {
                     val per = n / r.servings.coerceAtLeast(1).toDouble()
@@ -277,7 +277,7 @@ fun RecipeDetailScreen(id: Long, nav: NavHostController) {
                 }
             }
 
-            // ── Шаги ──
+            // ── Steps ──
             if (r.steps.isNotEmpty()) {
                 item {
                     Text(
@@ -357,7 +357,7 @@ private fun Nutrient(value: String, label: String, modifier: Modifier, accent: B
     }
 }
 
-/** Отметка «уже положил»: пустой кружок → залитый с галочкой. */
+/** "Already added" marker: empty circle → filled circle with a check. */
 @Composable
 fun CheckDot(done: Boolean) {
     val cs = MaterialTheme.colorScheme

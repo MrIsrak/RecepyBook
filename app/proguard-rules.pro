@@ -1,1 +1,1 @@
-# minify выключен; файл оставлен для будущей настройки
+# Minification is disabled; this file is kept for future configuration.

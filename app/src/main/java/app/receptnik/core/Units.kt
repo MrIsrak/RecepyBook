@@ -7,7 +7,7 @@ import kotlin.math.roundToInt
 enum class UnitKind { MASS, VOLUME, COUNT }
 
 /**
- * Единица измерения. [factor] — граммы (MASS) или миллилитры (VOLUME) в одной единице.
+ * A unit of measure. [factor] is grams (MASS) or millilitres (VOLUME) per unit.
  */
 data class MeasureUnit(
     val key: String,
@@ -49,7 +49,7 @@ object Units {
     private val byKey = all.associateBy { it.key }
     fun byKey(key: String?): MeasureUnit? = key?.let { byKey[it] }
 
-    /** Псевдонимы, отсортированные от длинных к коротким, нормализованные (без точек). */
+    /** Normalized aliases (dots removed), sorted longest first. */
     val aliasIndex: List<Pair<String, MeasureUnit>> = all
         .flatMap { u -> u.aliases.map { normalizeAlias(it) to u } }
         .sortedByDescending { it.first.length }
@@ -81,13 +81,13 @@ object Units {
         "sprig" to Triple("веточка", "sprig", "ענף"),
     )
 
-    /** Подпись единицы на языке интерфейса: lang = "ru" | "en" | "he". */
+    /** Unit label in the UI language: lang = "ru" | "en" | "he". */
     fun display(key: String?, lang: String = "ru"): String {
         val t = key?.let { labels[it] } ?: return key ?: ""
         return when (Lang.of(lang)) { "en" -> t.second; "he" -> t.third; else -> t.first }
     }
 
-    /** Пересчёт количества в выбранную систему единиц. */
+    /** Converts a quantity into the selected unit system. */
     fun convert(quantity: Double?, unitKey: String?, system: UnitSystem): Pair<Double?, String?> {
         val unit = byKey(unitKey) ?: return quantity to unitKey
         if (quantity == null || system == UnitSystem.ORIGINAL) return quantity to unitKey
@@ -98,7 +98,7 @@ object Units {
                     if (g >= 1000) g / 1000 to "kg" else g to "g"
                 }
                 UnitKind.VOLUME -> {
-                    // ложки и щепотки — универсальные, их оставляем
+                    // spoons and pinches are universal; keep them
                     if (unit.key in setOf("tsp", "tbsp", "pinch")) quantity to unit.key
                     else {
                         val ml = quantity * unit.factor
@@ -151,7 +151,7 @@ object QtyFormat {
         return if (Lang.of(lang) == "ru") str.replace('.', ',') else str
     }
 
-    /** Количество с единицей: «2–3 ст. л.», «400 г», "" если количества нет. */
+    /** Quantity with unit, e.g. "2–3 tbsp" or "400 g"; "" when there is no quantity. */
     fun formatAmount(ing: Ingredient, factor: Double, system: UnitSystem, lang: String = "ru"): String {
         if (ing.isHeader || ing.quantity == null) return ing.note ?: ""
         val (q, u) = Units.convert(ing.quantity * factor, ing.unit, system)
@@ -166,7 +166,7 @@ object QtyFormat {
     fun displayName(ing: Ingredient): String =
         ing.name.ifBlank { ing.original }.replaceFirstChar { it.uppercaseChar() }
 
-    /** «Творог — 400 г» — для списков и «Поделиться». */
+    /** "Cottage cheese — 400 g", used for lists and sharing. */
     fun formatIngredient(ing: Ingredient, factor: Double, system: UnitSystem, lang: String = "ru"): String {
         if (ing.isHeader) return ing.original
         val amount = formatAmount(ing, factor, system, lang)
@@ -174,7 +174,7 @@ object QtyFormat {
     }
 }
 
-/** Нормализация кода языка: iw → he, всё неизвестное → en. */
+/** Normalizes a language code: iw → he, anything unknown → en. */
 object Lang {
     fun of(code: String?): String = when (code?.lowercase()?.take(2)) {
         "ru", "uk", "be" -> "ru"

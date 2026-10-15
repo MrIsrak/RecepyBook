@@ -13,7 +13,7 @@ import kotlinx.serialization.json.contentOrNull
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 
-/** Разбор разметки schema.org/Recipe (её используют почти все сайты рецептов). */
+/** Parses schema.org/Recipe markup, used by almost every recipe website. */
 object JsonLd {
     private val json = Json { isLenient = true; ignoreUnknownKeys = true }
 
@@ -104,7 +104,7 @@ object JsonLd {
                 protein = number(str(n["proteinContent"])) ?: 0.0,
                 fat = number(str(n["fatContent"])) ?: 0.0,
                 carbs = number(str(n["carbohydrateContent"])) ?: 0.0,
-            ) * servings.toDouble() // на сайтах — на порцию
+            ) * servings.toDouble() // websites publish per-serving values
         }
         val keywords = str(o["keywords"])?.split(',')?.map { it.trim() }?.filter { it.isNotBlank() }?.take(8) ?: emptyList()
         return RecipeDraft(

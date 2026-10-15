@@ -19,14 +19,14 @@ data class Backup(
     val links: List<RecipeCookbook>,
     val plan: List<MealPlanEntry>,
     val grocery: List<GroceryItem>,
-    /** Картинки рецептов: id рецепта → JPEG в base64. */
+    /** Recipe images: recipe id → base64 JPEG. */
     val images: Map<Long, String> = emptyMap(),
 )
 
 class Repository(private val db: AppDatabase, private val images: ImageStore) {
     private val json = Json { ignoreUnknownKeys = true; prettyPrint = false }
 
-    // ---------- Рецепты ----------
+    // ---------- Recipes ----------
     val recipes: Flow<List<Recipe>> = db.recipes().all()
     fun recipe(id: Long): Flow<Recipe?> = db.recipes().byId(id)
     suspend fun getRecipe(id: Long): Recipe? = db.recipes().get(id)
@@ -66,7 +66,7 @@ class Repository(private val db: AppDatabase, private val images: ImageStore) {
     suspend fun toggleFavorite(r: Recipe) = db.recipes().update(r.copy(favorite = !r.favorite))
     suspend fun markCooked(r: Recipe) = db.recipes().update(r.copy(lastCookedAt = System.currentTimeMillis()))
 
-    // ---------- Кулинарные книги ----------
+    // ---------- Cookbooks ----------
     val cookbooks: Flow<List<Cookbook>> = db.cookbooks().all()
     val cookbookLinks: Flow<List<RecipeCookbook>> = db.cookbooks().links()
     fun cookbook(id: Long) = db.cookbooks().byId(id)
@@ -81,7 +81,7 @@ class Repository(private val db: AppDatabase, private val images: ImageStore) {
         if (inBook) db.cookbooks().link(link) else db.cookbooks().unlink(link)
     }
 
-    // ---------- План питания ----------
+    // ---------- Meal plan ----------
     fun plan(fromDay: Long, toDay: Long): Flow<List<PlannedMeal>> =
         db.mealPlan().range(fromDay, toDay).combine(recipes) { entries, recipes ->
             val byId = recipes.associateBy { it.id }
@@ -94,10 +94,10 @@ class Repository(private val db: AppDatabase, private val images: ImageStore) {
 
     suspend fun removeFromPlan(e: MealPlanEntry) = db.mealPlan().delete(e)
 
-    // ---------- Список покупок ----------
+    // ---------- Shopping list ----------
     val grocery: Flow<List<GroceryItem>> = db.grocery().all()
 
-    /** Добавляет ингредиенты рецепта; одинаковые продукты с одной единицей складываются. */
+    /** Adds a recipe's ingredients; identical items with the same unit are merged. */
     suspend fun addRecipeToGrocery(recipe: Recipe, servings: Int = recipe.servings) {
         val factor = if (recipe.servings > 0) servings.toDouble() / recipe.servings else 1.0
         val existing = db.grocery().allOnce().filter { !it.checked }.map { it.copy(aisle = Aisles.normalize(it.aisle)) }.toMutableList()
@@ -149,7 +149,7 @@ class Repository(private val db: AppDatabase, private val images: ImageStore) {
     suspend fun clearCheckedGrocery() = db.grocery().clearChecked()
     suspend fun clearAllGrocery() = db.grocery().clearAll()
 
-    // ---------- Резервная копия ----------
+    // ---------- Backup ----------
     suspend fun exportJson(): String = withContext(Dispatchers.IO) {
         val recipes = db.recipes().allOnce()
         val b = Backup(
@@ -163,7 +163,7 @@ class Repository(private val db: AppDatabase, private val images: ImageStore) {
         json.encodeToString(Backup.serializer(), b)
     }
 
-    /** Восстанавливает всё из копии (текущие данные заменяются). */
+    /** Restores everything from a backup, replacing current data. */
     suspend fun importJson(text: String): Int = withContext(Dispatchers.IO) {
         val parsed = json.decodeFromString(Backup.serializer(), text)
         val b = parsed.copy(recipes = parsed.recipes.map { r ->

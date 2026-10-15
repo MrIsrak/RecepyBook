@@ -30,7 +30,7 @@ class ReceptnikApp : Application() {
     }
 }
 
-/** Простое ручное внедрение зависимостей. */
+/** Minimal manual dependency container. */
 class AppContainer(context: Context) {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     val db = AppDatabase.create(context)
@@ -44,13 +44,13 @@ class AppContainer(context: Context) {
         if (s.geminiKey.isBlank()) null
         else GeminiClient(s.geminiKey, s.geminiModel, if (s.translateRecipes) languageName(appLanguage()) else null)
     }
-    val links = LinkImporter(gemini)
+    val links = LinkImporter(gemini, context.cacheDir)
     val photos = PhotoImporter(context, gemini, links)
 }
 
 val Context.container: AppContainer get() = (applicationContext as ReceptnikApp).container
 
-/** Текущий язык интерфейса: "ru" | "en" | "he". */
+/** Current UI language: "ru" | "en" | "he". */
 fun appLanguage(): String {
     val app = AppCompatDelegate.getApplicationLocales()
     val tag = if (!app.isEmpty) app[0]?.language else Locale.getDefault().language

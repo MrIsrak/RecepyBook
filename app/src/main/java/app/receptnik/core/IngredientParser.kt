@@ -1,9 +1,9 @@
 package app.receptnik.core
 
 /**
- * Разбирает строку ингредиента на количество, единицу и название.
- * Понимает: «200 г муки», «2-3 ст. л. сахара», «1½ cups flour», «Мука — 200 г»,
- * «Яйца 2 шт.», «Соль по вкусу», «200г сыра», «3 כוסות קמח».
+ * Splits an ingredient line into quantity, unit and name.
+ * Handles: "200 г муки", "2-3 ст. л. сахара", "1½ cups flour", "Мука — 200 г",
+ * "Яйца 2 шт.", "Соль по вкусу", "200г сыра", "3 כוסות קמח".
  */
 object IngredientParser {
     private const val NUM = "\\d+\\s+\\d+/\\d+|\\d+/\\d+|\\d+(?:[.,]\\d+)?"
@@ -17,7 +17,7 @@ object IngredientParser {
         Regex("^$body\\.?(?![\\p{L}])\\s*", RegexOption.IGNORE_CASE) to unit
     }
 
-    /** Если строка начинается с единицы измерения — возвращает её и длину совпадения. */
+    /** If the string starts with a unit, returns the unit and the match length. */
     fun matchUnit(s: String): Pair<MeasureUnit, Int>? {
         for ((re, unit) in unitRegexes) {
             val m = re.find(s) ?: continue
@@ -43,12 +43,12 @@ object IngredientParser {
         line = TextUtil.expandFractions(line).replace(Regex("\\s+"), " ").trim()
         if (line.isEmpty()) return Ingredient(original = raw.trim(), name = raw.trim())
 
-        // Заголовок группы: «Для соуса:», «Тесто:», «For the dough:»
+        // Group header: "Для соуса:", "Тесто:", "For the dough:"
         if (line.endsWith(":") && line.length < 40 && line.none { it.isDigit() }) {
             return Ingredient(original = line.trimEnd(':'), name = line.trimEnd(':'), isHeader = true)
         }
 
-        // 1) Количество в начале
+        // 1) Quantity first
         leadingQty.find(line)?.let { m ->
             val q = TextUtil.parseNumber(m.groupValues[1])
             val qMax = m.groupValues[2].takeIf { it.isNotEmpty() }?.let { TextUtil.parseNumber(it) }
@@ -58,14 +58,14 @@ object IngredientParser {
                 unitKey = u.key
                 rest = rest.substring(len)
             }
-            // «2 яйца (около 120 г)» — оставляем как есть
+            // "2 eggs (about 120 g)" is kept as is
             val (name, note) = extractNote(cleanName(rest))
             if (q != null && (name.isNotBlank() || unitKey != null)) {
                 return Ingredient(original = line, quantity = q, quantityMax = qMax, unit = unitKey, name = name, note = note)
             }
         }
 
-        // 2) Количество в конце: «Мука — 200 г», «Яйца 2 шт.»
+        // 2) Quantity last: "Flour — 200 g", "Eggs 2 pcs"
         trailingQty.find(line)?.let { m ->
             val namePart = m.groupValues[1]
             val q = TextUtil.parseNumber(m.groupValues[2])
@@ -79,12 +79,12 @@ object IngredientParser {
             }
         }
 
-        // 3) Без количества
+        // 3) No quantity
         val (name, note) = extractNote(cleanName(line))
         return Ingredient(original = line, name = name, note = note)
     }
 
-    /** Похоже ли на строку ингредиента (для разбора подписей без заголовков). */
+    /** Whether a line looks like an ingredient (used for captions without headers). */
     fun looksLikeIngredient(raw: String): Boolean {
         val line = TextUtil.expandFractions(TextUtil.cleanLine(raw))
         if (line.isEmpty() || line.length > 90) return false

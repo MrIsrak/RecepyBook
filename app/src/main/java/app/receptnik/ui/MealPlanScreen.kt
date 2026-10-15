@@ -113,7 +113,7 @@ fun MealPlanScreen(nav: NavHostController) {
                 val isToday = date == today
                 Column(Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        // Число дня крупно, сегодня — с акцентной точкой
+                        // Large day number; today is marked with an accent dot
                         Text(date.dayOfMonth.toString(), style = MaterialTheme.typography.headlineMedium,
                             color = if (isToday) Accent else MaterialTheme.colorScheme.onSurface, modifier = Modifier.width(48.dp))
                         Column(Modifier.weight(1f)) {

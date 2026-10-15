@@ -8,7 +8,7 @@ local.properties
 captures/
 .kotlin/
 
-# Ключи подписи — никогда не коммитить
+# Signing keys — never commit
 *.jks
 *.keystore
 *.jks.b64

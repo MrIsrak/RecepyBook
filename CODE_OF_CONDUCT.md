@@ -1,11 +1,18 @@
-# Правила поведения
+# Code of Conduct
 
-Проект придерживается [Contributor Covenant 2.1](https://www.contributor-covenant.org/ru/version/2/1/code_of_conduct/).
+This project adopts the [Contributor Covenant, version 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/) as its code of conduct. All contributors and maintainers are expected to follow it in every project space: issues, pull requests, discussions and any other channel.
 
-Коротко:
-- Уважай других участников, их время и мнение.
-- Критикуй код, а не людей.
-- Никаких оскорблений, домогательств и дискриминации.
-- Помогай новичкам.
+## Summary
 
-О нарушениях сообщай мейнтейнеру через [приватное сообщение](https://github.com/MrIsrak/RecepyBook/security/advisories/new) или в личные сообщения @MrIsrak. Все обращения рассматриваются конфиденциально.
+- Be respectful and welcoming, regardless of background or experience level.
+- Critique ideas and code, not people.
+- Harassment, insults and discriminatory language are not tolerated.
+- Help newcomers find their way.
+
+## Reporting
+
+Report unacceptable behavior privately to the maintainer, [@MrIsrak](https://github.com/MrIsrak), or through a [private advisory](https://github.com/MrIsrak/RecepyBook/security/advisories/new). All reports are reviewed promptly and handled confidentially.
+
+## Enforcement
+
+The maintainer may take any action deemed appropriate, following the [Contributor Covenant enforcement guidelines](https://www.contributor-covenant.org/version/2/1/code_of_conduct/#enforcement-guidelines): a correction, a warning, a temporary ban or a permanent ban.

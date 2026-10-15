@@ -10,15 +10,15 @@ import java.io.File
 import java.util.UUID
 
 /**
- * Хранит картинки рецептов в памяти приложения: ссылки на картинки из Instagram/TikTok
- * со временем перестают работать, поэтому копируем их сразу.
+ * Stores recipe images in app storage: Instagram/TikTok CDN links
+ * expire over time, so images are copied on save.
  */
 class ImageStore(private val context: Context) {
     private val dir: File get() = File(context.filesDir, "images").apply { mkdirs() }
 
     fun isLocal(path: String?) = path != null && path.startsWith("/")
 
-    /** Возвращает путь к локальной копии или исходный адрес, если скачать не удалось. */
+    /** Returns the local copy path, or the original address if the download failed. */
     suspend fun persist(source: String?): String? = withContext(Dispatchers.IO) {
         if (source.isNullOrBlank() || isLocal(source)) return@withContext source
         runCatching {
@@ -49,6 +49,6 @@ class ImageStore(private val context: Context) {
         if (isLocal(path)) runCatching { File(path!!).delete() }
     }
 
-    /** Модель для Coil: файл или URL. */
+    /** Coil model: a File or a URL. */
     fun model(path: String?): Any? = if (isLocal(path)) File(path!!) else path
 }

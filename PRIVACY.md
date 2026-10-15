@@ -1,17 +1,42 @@
-# Политика конфиденциальности
+# Privacy Policy
 
-_Обновлено: 15 октября 2026_
+_Last updated: 15 October 2026 (video understanding added)_
 
-RecepyBook (Рецептник) не собирает, не хранит на серверах и не передаёт третьим лицам персональные данные.
+RecepyBook does not collect, store on any server, or share personal data with third parties.
 
-**Что хранится на телефоне:** рецепты, фото, кулинарные книги, план питания, список покупок, настройки (включая ключ Gemini, если ты его ввёл). Всё это лежит в памяти приложения и удаляется вместе с ним.
+## Data stored on your device
 
-**Сетевые запросы делаются только по твоему действию:**
-- при импорте: на адрес ссылки, которой ты поделился, и на публичные oEmbed-сервисы TikTok и YouTube, чтобы получить подпись и обложку;
-- при включённом ключе Gemini: текст поста или фото отправляется в Google Gemini API для разбора. Обработку там регулируют [условия Google](https://ai.google.dev/gemini-api/terms).
+Recipes, photos, cookbooks, meal plans, shopping lists and settings (including your Gemini API key, if you add one). All of this is kept in the app's private storage and is deleted when the app is uninstalled.
 
-**Нет:** аккаунтов, рекламы, аналитики, трекеров, сбора отчётов о сбоях.
+## Network requests
 
-**Резервная копия** — обычный файл, который ты сам сохраняешь куда хочешь.
+The app connects to the internet only when you take an action:
 
-Вопросы задавай через [issue](https://github.com/MrIsrak/RecepyBook/issues).
+| Action | Destination | Data sent |
+|---|---|---|
+| Importing a link | The link you shared, plus public oEmbed endpoints of TikTok and YouTube | The link URL |
+| Saving an imported recipe | The image host of that recipe | A request for the cover image |
+| AI parsing (only with your own key) | Google Gemini API (`generativelanguage.googleapis.com`) | The post text or photo being parsed |
+| AI video understanding (only with your own key, when the caption has no recipe) | The platform's video CDN, then the Gemini Files API | The video is downloaded to a temporary file, uploaded to your Gemini account, and deleted from both places after processing |
+
+When AI parsing is used, the data is processed under the [Gemini API Terms of Service](https://ai.google.dev/gemini-api/terms).
+
+## What we do not do
+
+No accounts, advertising, analytics, tracking or crash reporting.
+
+## Backups
+
+A backup is a regular file that you choose to save and store yourself. It contains your recipes and photos; keep it somewhere you trust.
+
+## Children
+
+The app does not knowingly collect any data from anyone, including children.
+
+## Changes
+
+Changes to this policy are recorded in this file and in the [changelog](CHANGELOG.md).
+
+## Contact
+
+Questions about this policy: open an [issue](https://github.com/MrIsrak/RecepyBook/issues) or contact the maintainer, [@MrIsrak](https://github.com/MrIsrak).

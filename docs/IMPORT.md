@@ -27,7 +27,7 @@ If the input contains no URL and is longer than 20 characters, it is parsed dire
 
 | Platform | Strategy (in order) | Notes |
 |---|---|---|
-| **TikTok** | 0. Captions from link previews are cleaned of the "@author - " prefix<br>1. Expand short links (`vt.`/`vm.tiktok.com`) via `Location` headers<br>2. oEmbed API (`/oembed?url=`), full caption<br>3. Video page: embedded JSON (`__UNIVERSAL_DATA_FOR_REHYDRATION__`, `SIGI_STATE`), desktop then crawler user agent<br>4. `og:` tags | oEmbed is rate-limited (HTTP 429) per IP; steps 3–4 cover this case |
+| **TikTok** | 1. Expand short links (`vt.`/`vm.tiktok.com`) via `Location` headers, **stopping at the first URL that contains the video ID** (TikTok may redirect further to its home page)<br>2. oEmbed with the canonical `/@user/video/ID` URL<br>3. Video page embedded JSON (`__UNIVERSAL_DATA_FOR_REHYDRATION__`, `SIGI_STATE`), desktop then mobile user agent, matched by video ID<br>4. Embed player page `/embed/v2/ID`<br>5. Public [tikwm.com](https://www.tikwm.com) API (third party; also provides a direct video URL)<br>6. `og:` tags of the video page<br>Generic site-wide previews ("TikTok \| Make Your Day") are rejected at every step | oEmbed is rate-limited per IP; later steps cover this |
 | **Instagram** | 1. Embed page `/p/{code}/embed/captioned/` (caption, image)<br>2. `og:` tags via crawler user agent, keeping the longer caption | Private posts are not accessible |
 | **YouTube** | oEmbed (title, thumbnail, channel) and `shortDescription` from the watch page | Supports `watch`, `youtu.be`, `shorts`, `embed`, `live` URLs |
 | **Facebook** | `og:` tags via crawler user agent | Often limited without sign-in |

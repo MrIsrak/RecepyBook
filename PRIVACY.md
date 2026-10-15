@@ -15,6 +15,7 @@ The app connects to the internet only when you take an action:
 | Action | Destination | Data sent |
 |---|---|---|
 | Importing a link | The link you shared, plus public oEmbed endpoints of TikTok and YouTube | The link URL |
+| Importing a TikTok link when TikTok's own endpoints do not respond | The public tikwm.com API | The TikTok video link |
 | Saving an imported recipe | The image host of that recipe | A request for the cover image |
 | AI parsing (only with your own key) | Google Gemini API (`generativelanguage.googleapis.com`) | The post text or photo being parsed |
 | AI video understanding (only with your own key, when the caption has no recipe) | The platform's video CDN, then the Gemini Files API | The video is downloaded to a temporary file, uploaded to your Gemini account, and deleted from both places after processing |

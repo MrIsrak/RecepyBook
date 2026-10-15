@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-15
+
 ### Добавлено
 - Интерфейс на английском, русском и иврите (с зеркальной раскладкой справа налево); выбор языка в настройках.
 - Новый минималистичный дизайн: шрифт Rubik, палитра «тёплый белый / графит» с одним акцентом, тёмная тема, фото на первом плане.
@@ -32,5 +34,6 @@
 - Резервная копия и восстановление (включая фото).
 - Необязательный умный разбор через Google Gemini со своим ключом.
 
-[Unreleased]: https://github.com/MrIsrak/RecepyBook/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/MrIsrak/RecepyBook/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/MrIsrak/RecepyBook/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/MrIsrak/RecepyBook/releases/tag/v1.0.0

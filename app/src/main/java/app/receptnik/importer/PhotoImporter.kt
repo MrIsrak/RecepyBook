@@ -16,9 +16,9 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 /**
- * Рецепт с фото (скриншот, страница кулинарной книги).
- * С ключом Gemini — понимает любой язык, включая русский рукописный текст.
- * Без ключа — встроенное распознавание текста ML Kit (латиница).
+ * Imports a recipe from a photo (screenshot, cookbook page).
+ * With a Gemini key it understands any language, including handwriting.
+ * Without one it uses on-device ML Kit OCR (Latin script only).
  */
 class PhotoImporter(private val context: Context, private val gemini: () -> GeminiClient?, private val links: LinkImporter) {
 

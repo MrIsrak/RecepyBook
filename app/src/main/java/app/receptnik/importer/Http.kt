@@ -9,7 +9,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
-/** Понятная причина неудачного импорта; текст для пользователя — в ресурсах интерфейса. */
+/** A user-facing reason for a failed import; messages live in UI resources. */
 class ImportException(val reason: Reason, detail: String? = null) : Exception(detail ?: reason.name) {
     enum class Reason { NO_LINK, RATE_LIMITED, NOT_FOUND, BLOCKED, SITE_ERROR, BAD_RESPONSE }
 }
@@ -19,7 +19,7 @@ object Http {
         "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36"
     const val UA_DESKTOP =
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
-    /** Соцсети отдают превью (og:теги) роботам соцсетей. */
+    /** Social networks serve link previews (og: tags) to their own crawlers. */
     const val UA_BOT = "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)"
 
     val client: OkHttpClient = OkHttpClient.Builder()
@@ -38,7 +38,7 @@ object Http {
 
     private val noRedirect: OkHttpClient by lazy { client.newBuilder().followRedirects(false).followSslRedirects(false).build() }
 
-    /** Раскрывает короткую ссылку (vt.tiktok.com, pin.it…) по заголовкам Location, не скачивая страницу. */
+    /** Expands a short link (vt.tiktok.com, pin.it…) by following Location headers without downloading the page. */
     suspend fun resolve(url: String, ua: String = UA_DESKTOP, maxHops: Int = 6): String = withContext(Dispatchers.IO) {
         var current = url
         repeat(maxHops) {
@@ -51,7 +51,7 @@ object Http {
         current
     }
 
-    /** GET с повтором при 429 / 5xx. */
+    /** GET with retries on 429 / 5xx. */
     suspend fun getWithRetry(url: String, ua: String = UA_MOBILE, attempts: Int = 3): Page {
         var last: Page? = null
         for (i in 0 until attempts) {

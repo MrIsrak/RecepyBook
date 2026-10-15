@@ -11,7 +11,7 @@ import androidx.compose.runtime.mutableStateOf
 import app.receptnik.ui.AppNav
 import app.receptnik.ui.ReceptnikTheme
 
-/** Что пришло через «Поделиться». */
+/** Content received through the system share sheet. */
 sealed interface Shared {
     data class Text(val text: String) : Shared
     data class Image(val uri: Uri) : Shared

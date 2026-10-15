@@ -62,7 +62,7 @@ import app.receptnik.importer.ImportWarning
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
-/** Ошибка импорта: известная причина (локализуется) или текст как есть. */
+/** Import error: a known (localized) reason or raw text. */
 sealed interface ImportError {
     data class Known(val reason: ImportException.Reason) : ImportError
     data object NoInternet : ImportError
@@ -273,7 +273,7 @@ fun ImportScreen(initialText: String, initialImage: String, nav: NavHostControll
     }
 }
 
-/** Тихое уведомление: серый блок (или красноватый для ошибок), без иконок. */
+/** Quiet notice: a soft grey block (reddish for errors), no icons. */
 @Composable
 fun Notice(text: String, error: Boolean = false, action: String? = null, onAction: () -> Unit = {}) {
     val cs = MaterialTheme.colorScheme

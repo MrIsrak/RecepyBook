@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Уязвимость безопасности
+  - name: Security vulnerability
     url: https://github.com/MrIsrak/RecepyBook/security/advisories/new
-    about: Сообщай о проблемах безопасности приватно, не в открытых issue
+    about: Report security issues privately — never in a public issue.
+  - name: Questions and help
+    url: https://github.com/MrIsrak/RecepyBook/blob/main/SUPPORT.md
+    about: Where to get help using RecepyBook.

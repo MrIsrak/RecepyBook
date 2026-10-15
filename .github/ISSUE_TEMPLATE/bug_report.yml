@@ -1,42 +1,60 @@
-name: Ошибка
-description: Что-то работает не так
-labels: [bug]
+name: Bug report
+description: Something does not work as expected
+title: "[Bug]: "
+labels: [bug, triage]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please search [existing issues](https://github.com/MrIsrak/RecepyBook/issues) first.
+        Issues may be written in English, Russian or Hebrew.
   - type: textarea
     id: what
     attributes:
-      label: Что случилось
-      description: Что ты делал, что ожидал и что получил
+      label: What happened?
+      description: What you did, what you expected, and what actually happened.
     validations:
       required: true
   - type: input
     id: link
     attributes:
-      label: Ссылка на рецепт (если ошибка при импорте)
+      label: Recipe link (for import issues)
       placeholder: https://www.instagram.com/p/...
   - type: textarea
     id: steps
     attributes:
-      label: Как повторить
+      label: Steps to reproduce
       value: |
         1.
         2.
         3.
+    validations:
+      required: true
   - type: input
     id: version
     attributes:
-      label: Версия приложения
-      description: Настройки → внизу экрана
-      placeholder: "1.0.0"
+      label: App version
+      description: Shown at the bottom of Settings.
+      placeholder: "1.1.0"
     validations:
       required: true
   - type: input
     id: device
     attributes:
-      label: Телефон и версия Android
-      placeholder: Samsung A54, Android 14
+      label: Device and Android version
+      placeholder: Samsung Galaxy A54, Android 14
+  - type: dropdown
+    id: language
+    attributes:
+      label: App language
+      options: ["English", "Russian", "Hebrew", "System default"]
   - type: dropdown
     id: ai
     attributes:
-      label: Ключ Gemini включён?
-      options: ["Нет", "Да"]
+      label: Is a Gemini API key configured?
+      options: ["No", "Yes"]
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Drag and drop images here. Please remove any personal data.

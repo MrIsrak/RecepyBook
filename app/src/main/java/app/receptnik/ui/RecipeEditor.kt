@@ -28,7 +28,7 @@ import app.receptnik.core.RecipeDraft
 import app.receptnik.core.UnitSystem
 import app.receptnik.data.Recipe
 
-/** Редактируемые поля рецепта. Ингредиенты и шаги — по одному на строку. */
+/** Editable recipe fields. Ingredients and steps are one per line. */
 class EditorState {
     var title by mutableStateOf("")
     var description by mutableStateOf("")
@@ -90,7 +90,7 @@ class EditorState {
         fun ingredientsToText(list: List<Ingredient>): String = list.joinToString("\n") {
             if (it.isHeader) it.original + ":" else {
                 val amount = QtyFormat.formatAmount(it, 1.0, UnitSystem.ORIGINAL)
-                // Сохраняем исходную строку, если разбор её не изменил по смыслу
+                // Keep the original line when parsing did not change its meaning
                 if (it.quantity == null) it.original else "$amount ${it.name}" + (it.note?.let { n -> " $n" } ?: "")
             }
         }

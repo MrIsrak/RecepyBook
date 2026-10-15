@@ -231,7 +231,7 @@ private fun filterAndSort(all: List<Recipe>, query: String, onlyFav: Boolean, me
         .toList()
 }
 
-/** Карточка: фото — главное, под ним название и тихая мета-строка. */
+/** Card: the photo leads, with the title and a quiet meta line below. */
 @Composable
 fun RecipeCard(r: Recipe, onClick: () -> Unit) {
     val time = minutesText(r.totalTimeMin)

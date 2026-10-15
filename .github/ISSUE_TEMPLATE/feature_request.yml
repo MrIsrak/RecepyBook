@@ -1,18 +1,22 @@
-name: Идея
-description: Предложить новую возможность
-labels: [enhancement]
+name: Feature request
+description: Suggest an idea or improvement
+title: "[Feature]: "
+labels: [enhancement, triage]
 body:
   - type: textarea
     id: problem
     attributes:
-      label: Какую задачу это решает
+      label: Problem statement
+      description: What problem would this solve? Who is affected?
     validations:
       required: true
   - type: textarea
     id: solution
     attributes:
-      label: Как это могло бы работать
+      label: Proposed solution
+      description: How could it work from the user's point of view?
   - type: textarea
     id: alternatives
     attributes:
-      label: Как ты справляешься сейчас
+      label: Alternatives and workarounds
+      description: How do you handle this today?

@@ -7,7 +7,7 @@ object TextUtil {
         '⅚' to "5/6", '⅛' to "1/8", '⅜' to "3/8", '⅝' to "5/8", '⅞' to "7/8",
     )
 
-    /** Заменяет «1½» → «1 1/2», «½» → «1/2». */
+    /** Expands "1½" to "1 1/2" and "½" to "1/2". */
     fun expandFractions(s: String): String {
         if (s.none { it in fractionMap }) return s
         val sb = StringBuilder()
@@ -21,7 +21,7 @@ object TextUtil {
         return sb.toString()
     }
 
-    /** «1️⃣ Смешать» → «1. Смешать». */
+    /** Converts "1️⃣ Mix" to "1. Mix". */
     fun keycapsToNumbers(s: String): String =
         s.replace(Regex("([0-9])\\uFE0F?\\u20E3"), "$1. ")
             .replace("🔟", "10. ") // 🔟
@@ -43,7 +43,7 @@ object TextUtil {
         return sb.toString()
     }
 
-    /** Чистая строка: без эмодзи, лишних пробелов, маркеров списка в начале. */
+    /** Cleans a line: strips emoji, extra whitespace and leading list markers. */
     fun cleanLine(raw: String): String {
         var s = keycapsToNumbers(raw)
         s = stripEmoji(s).replace(' ', ' ').replace(Regex("[\\t ]+"), " ").trim()
@@ -54,7 +54,7 @@ object TextUtil {
     fun firstUrl(text: String): String? =
         Regex("https?://[^\\s<>\"']+").find(text)?.value?.trimEnd('.', ',', ')', '!', '?')
 
-    /** Убирает хэштеги и упоминания в конце подписи. */
+    /** Removes hashtags from a caption. */
     fun stripHashtags(s: String): String =
         s.replace(Regex("(^|\\s)#[\\p{L}\\p{N}_]+"), " ").replace(Regex("[ \\t]+"), " ").trim()
 

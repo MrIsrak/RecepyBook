@@ -1,8 +1,8 @@
 package app.receptnik.core
 
 /**
- * Превращает свободный текст (подпись к посту Instagram/TikTok, описание YouTube,
- * распознанный с фото текст) в рецепт: название, ингредиенты, шаги, порции, время.
+ * Turns free text (an Instagram/TikTok caption, a YouTube description,
+ * OCR output) into a recipe: title, ingredients, steps, servings and time.
  */
 object CaptionParser {
     private val ingredientHeaders = listOf(
@@ -34,7 +34,7 @@ object CaptionParser {
         for (h in ingredientHeaders + stepHeaders) {
             if (lower.startsWith(h)) {
                 val after = clean.substring(h.length)
-                // «Ингредиенты на 4 порции:» — тоже заголовок
+                // "Ingredients for 4 servings:" is a header too
                 val rest = after.trimStart()
                 val isHeader = rest.isEmpty() || rest.startsWith(":") || rest.startsWith("(") ||
                     rest.startsWith("-") || rest.startsWith("—") ||
@@ -55,7 +55,7 @@ object CaptionParser {
         return stopMarkers.any { l.startsWith(it) }
     }
 
-    /** Разбивает длинный абзац на предложения-шаги. */
+    /** Splits a long paragraph into sentence-sized steps. */
     private fun splitSteps(text: String): List<String> {
         val t = text.trim()
         val parts = t.split(Regex("(?<=[.!?])\\s+(?=[\\p{Lu}\\u0590-\\u05FF\\d])")).filterNot { isStop(it) }
@@ -76,7 +76,7 @@ object CaptionParser {
 
     fun parse(rawText: String, fallbackTitle: String? = null): RecipeDraft {
         var text = TextUtil.keycapsToNumbers(rawText).replace("\r", "")
-        // Заголовки посреди строки («...за 15 минут! Ингредиенты: ...») переносим на новую строку
+        // Move headers found mid-line ("...in 15 minutes! Ingredients: ...") onto their own line
         for (h in (ingredientHeaders + stepHeaders).sortedByDescending { it.length }) {
             text = text.replace(Regex("(?<=[.!?…)])[ \\t]+(" + Regex.escape(h) + ")\\s*:", RegexOption.IGNORE_CASE), "\n$1:")
         }
@@ -85,7 +85,7 @@ object CaptionParser {
         val ingredients = mutableListOf<String>()
         val steps = mutableListOf<String>()
         val intro = mutableListOf<String>()
-        var mode = '0' // 0 — вступление, I — ингредиенты, S — шаги, X — хвост (хэштеги)
+        var mode = '0' // 0 = intro, I = ingredients, S = steps, X = trailing hashtags
         var sawHeaders = false
 
         for (raw in lines) {
@@ -105,7 +105,7 @@ object CaptionParser {
             when (mode) {
                 'I' -> {
                     val c = TextUtil.cleanLine(line)
-                    // нумерованные длинные строки после ингредиентов — уже шаги
+                    // long numbered lines after the ingredients are steps
                     if (numberedStep.matches(c) && c.length > 45 && !IngredientParser.looksLikeIngredient(c)) {
                         mode = 'S'; steps += cleanStep(c)
                     } else if (c.contains(',') && c.length > 60 && !c.contains('.') && ingredients.isEmpty()) {
@@ -117,7 +117,7 @@ object CaptionParser {
             }
         }
 
-        // Заголовков не было — разбираем эвристикой
+        // No section headers: fall back to heuristics
         if (!sawHeaders) {
             intro.clear()
             for (raw in lines) {
@@ -165,7 +165,7 @@ object CaptionParser {
     fun cleanTitle(s: String): String {
         var t = TextUtil.stripHashtags(TextUtil.stripEmoji(s)).replace(Regex("\\s+"), " ").trim()
         t = t.trim(' ', '"', '«', '»', '-', '—', ':', '!', '.', '|')
-        // Если первая строка — целый абзац, берём первое предложение
+        // If the first line is a whole paragraph, keep the first sentence
         if (t.length > 70) t = t.split(Regex("(?<=[.!?])\\s")).first().take(70).trim()
         return t
     }

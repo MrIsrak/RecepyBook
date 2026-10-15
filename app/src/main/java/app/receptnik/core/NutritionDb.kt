@@ -1,9 +1,9 @@
 package app.receptnik.core
 
 /**
- * Встроенная таблица продуктов: ккал / белки / жиры / углеводы на 100 г,
- * вес одной штуки, плотность (г/мл) и отдел магазина.
- * Названия: русский, английский, иврит (основы слов).
+ * Built-in food table: kcal / protein / fat / carbs per 100 g,
+ * weight of one piece, density (g/ml) and store aisle.
+ * Names are word stems in Russian, English and Hebrew.
  */
 data class Food(
     val stems: List<String>,
@@ -15,7 +15,7 @@ data class Food(
     val pack: Double? = null,
 )
 
-/** Отделы магазина. Хранятся как стабильные ключи; подписи — в ресурсах интерфейса. */
+/** Store aisles, stored as stable keys; display labels live in UI resources. */
 object Aisles {
     const val VEG = "veg"
     const val MEAT = "meat"
@@ -29,7 +29,7 @@ object Aisles {
     const val OTHER = "other"
     val order = listOf(VEG, MEAT, DAIRY, BAKERY, GROCERY, SPICES, NUTS, SWEETS, DRINKS, OTHER)
 
-    /** Версия 1.0 хранила русские названия — переводим их в ключи. */
+    /** Version 1.0 stored Russian labels; map them to keys. */
     private val legacy = mapOf(
         "Овощи, фрукты, зелень" to VEG, "Мясо и рыба" to MEAT, "Молочное и яйца" to DAIRY,
         "Бакалея и крупы" to GROCERY, "Хлеб и выпечка" to BAKERY, "Специи, соусы, масла" to SPICES,
@@ -56,7 +56,7 @@ object NutritionDb {
     private fun f(vararg stems: String) = stems.toList()
 
     val foods: List<Food> = listOf(
-        // Бакалея
+        // Pantry
         Food(f("мук", "flour", "קמח"), 364.0, 10.0, 1.0, 76.0, density = 0.53, aisle = Aisles.GROCERY),
         Food(f("сахарн пудр", "сахарной пудр", "пудр", "powdered sugar", "icing sugar", "אבקת סוכר"), 389.0, 0.0, 0.0, 100.0, density = 0.5, aisle = Aisles.GROCERY),
         Food(f("коричнев сахар", "brown sugar", "סוכר חום"), 380.0, 0.0, 0.0, 98.0, density = 0.9, aisle = Aisles.GROCERY),
@@ -80,13 +80,13 @@ object NutritionDb {
         Food(f("панировоч", "сухар", "breadcrumb", "panko", "פירורי לחם"), 395.0, 13.0, 5.0, 72.0, density = 0.45, aisle = Aisles.GROCERY),
         Food(f("манк", "semolina", "סולת"), 360.0, 12.7, 1.0, 73.0, density = 0.7, aisle = Aisles.GROCERY),
 
-        // Хлеб
+        // Bakery
         Food(f("хлеб", "батон", "багет", "bread", "baguette", "toast", "לחם"), 265.0, 9.0, 3.2, 49.0, piece = 30.0, aisle = Aisles.BAKERY),
         Food(f("лаваш", "пит", "pita", "lavash", "פיתה", "לאפה"), 275.0, 9.0, 1.2, 56.0, piece = 60.0, aisle = Aisles.BAKERY),
         Food(f("тортиль", "tortilla", "טורטייה"), 300.0, 8.0, 7.0, 50.0, piece = 45.0, aisle = Aisles.BAKERY),
         Food(f("слоен тест", "слоёное тест", "puff pastry", "בצק עלים"), 550.0, 7.0, 37.0, 45.0, aisle = Aisles.BAKERY, pack = 500.0),
 
-        // Молочное и яйца
+        // Dairy & eggs
         Food(f("яйц", "яиц", "яйк", "egg", "ביצ"), 155.0, 13.0, 11.0, 1.1, piece = 55.0, aisle = Aisles.DAIRY),
         Food(f("белок яиц", "белк", "egg white", "חלבון"), 52.0, 11.0, 0.2, 0.7, piece = 33.0, aisle = Aisles.DAIRY),
         Food(f("желт", "желток", "egg yolk", "yolk", "חלמון"), 322.0, 16.0, 27.0, 3.6, piece = 17.0, aisle = Aisles.DAIRY),
@@ -105,7 +105,7 @@ object NutritionDb {
         Food(f("фет", "брынз", "feta", "פטה", "גבינה בולגרית", "בולגרית"), 264.0, 14.0, 21.0, 4.0, aisle = Aisles.DAIRY),
         Food(f("сыр", "cheese", "cheddar", "чеддер", "גבינה", "צהובה"), 350.0, 25.0, 27.0, 2.0, density = 0.45, piece = 20.0, aisle = Aisles.DAIRY),
 
-        // Мясо и рыба
+        // Meat & fish
         Food(f("куриная грудк", "куриное филе", "филе куриц", "грудк", "chicken breast", "חזה עוף"), 165.0, 31.0, 3.6, 0.0, piece = 200.0, aisle = Aisles.MEAT),
         Food(f("бедр", "окорочк", "chicken thigh", "thigh", "ירכיים", "פרגית", "פרגיות"), 209.0, 26.0, 11.0, 0.0, piece = 120.0, aisle = Aisles.MEAT),
         Food(f("крыл", "wing", "כנפיים"), 203.0, 30.0, 8.0, 0.0, piece = 90.0, aisle = Aisles.MEAT),
@@ -123,7 +123,7 @@ object NutritionDb {
         Food(f("кревет", "shrimp", "prawn", "שרימפס"), 99.0, 24.0, 0.3, 0.2, piece = 12.0, aisle = Aisles.MEAT),
         Food(f("рыб", "треск", "тилапи", "fish", "cod", "tilapia", "דג", "דגים", "אמנון"), 110.0, 20.0, 3.0, 0.0, piece = 150.0, aisle = Aisles.MEAT),
 
-        // Овощи, фрукты, зелень
+        // Produce
         Food(f("картоф", "картош", "potato", "תפוח אדמה", "תפוחי אדמה", "תפו\"א"), 77.0, 2.0, 0.1, 17.0, piece = 170.0, aisle = Aisles.VEG),
         Food(f("батат", "sweet potato", "בטטה"), 86.0, 1.6, 0.1, 20.0, piece = 200.0, aisle = Aisles.VEG),
         Food(f("зелен лук", "зелёный лук", "зеленый лук", "green onion", "scallion", "spring onion", "בצל ירוק"), 32.0, 1.8, 0.2, 7.0, piece = 15.0, aisle = Aisles.VEG),
@@ -162,7 +162,7 @@ object NutritionDb {
         Food(f("груш", "pear", "אגס"), 57.0, 0.4, 0.1, 15.0, piece = 170.0, aisle = Aisles.VEG),
         Food(f("ягод", "клубник", "малин", "черник", "голубик", "berr", "strawberr", "raspberr", "blueberr", "תות", "פירות יער"), 50.0, 0.7, 0.3, 12.0, piece = 12.0, density = 0.6, aisle = Aisles.VEG),
 
-        // Орехи и сухофрукты
+        // Nuts & dried fruit
         Food(f("арахисов паст", "арахисовая паст", "peanut butter", "חמאת בוטנים"), 588.0, 25.0, 50.0, 20.0, density = 1.1, aisle = Aisles.NUTS),
         Food(f("миндал", "almond", "שקד"), 579.0, 21.0, 50.0, 22.0, density = 0.6, aisle = Aisles.NUTS),
         Food(f("арахис", "peanut", "בוטנים"), 567.0, 26.0, 49.0, 16.0, density = 0.6, aisle = Aisles.NUTS),
@@ -175,7 +175,7 @@ object NutritionDb {
         Food(f("финик", "medjool", "תמר"), 282.0, 2.5, 0.4, 75.0, piece = 8.0, aisle = Aisles.NUTS),
         Food(f("курага", "кураг", "dried apricot", "משמש מיובש"), 241.0, 3.4, 0.5, 63.0, piece = 8.0, aisle = Aisles.NUTS),
 
-        // Сладкое
+        // Sweets
         Food(f("мед", "мёд", "honey", "דבש"), 304.0, 0.3, 0.0, 82.0, density = 1.42, aisle = Aisles.SWEETS),
         Food(f("сироп", "syrup", "סילאן", "סירופ"), 270.0, 0.0, 0.0, 70.0, density = 1.3, aisle = Aisles.SWEETS),
         Food(f("шоколад", "chocolate", "שוקולד"), 546.0, 5.0, 31.0, 61.0, density = 0.6, piece = 10.0, aisle = Aisles.SWEETS, pack = 100.0),
@@ -183,7 +183,7 @@ object NutritionDb {
         Food(f("ванил", "vanilla", "וניל"), 288.0, 0.1, 0.1, 13.0, aisle = Aisles.SWEETS, pack = 10.0),
         Food(f("печенье", "печенья", "cookie", "biscuit", "עוגיות", "ביסקוויט"), 450.0, 6.0, 18.0, 68.0, piece = 10.0, aisle = Aisles.SWEETS),
 
-        // Специи, соусы, масла
+        // Spices, sauces & oils
         Food(f("оливков", "olive oil", "שמן זית"), 884.0, 0.0, 100.0, 0.0, density = 0.92, aisle = Aisles.SPICES),
         Food(f("масл", "oil", "שמן"), 884.0, 0.0, 100.0, 0.0, density = 0.92, aisle = Aisles.SPICES),
         Food(f("соев", "soy", "סויה"), 53.0, 8.0, 0.6, 5.0, density = 1.2, aisle = Aisles.SPICES),
@@ -202,7 +202,7 @@ object NutritionDb {
         Food(f("орегано", "тимьян", "розмарин", "прованс", "итальянск трав", "oregano", "thyme", "rosemary", "italian seasoning", "אורגנו", "טימין", "רוזמרין", "זעתר"), 270.0, 9.0, 4.3, 69.0, density = 0.3, aisle = Aisles.SPICES),
         Food(f("специ", "приправ", "spice", "seasoning", "תבלין", "תבלינים"), 250.0, 10.0, 8.0, 50.0, density = 0.5, aisle = Aisles.SPICES),
 
-        // Напитки
+        // Drinks
         Food(f("вод", "water", "מים"), 0.0, 0.0, 0.0, 0.0, aisle = Aisles.DRINKS),
         Food(f("вин", "wine", "יין"), 85.0, 0.1, 0.0, 2.6, aisle = Aisles.DRINKS),
         Food(f("пив", "beer", "בירה"), 43.0, 0.5, 0.0, 3.6, aisle = Aisles.DRINKS),
@@ -214,7 +214,7 @@ object NutritionDb {
 
     private fun isHebrew(s: String) = s.any { it in '֐'..'׿' }
 
-    /** Находит продукт по названию: длиннее основа — точнее; при равенстве — та, что ближе к концу (существительное). */
+    /** Finds a food by name: longer stems win; on a tie, the stem closer to the end (usually the noun). */
     fun match(name: String): Food? {
         val n = " " + name.lowercase().replace('ё', 'е') + " "
         var best: Food? = null
@@ -236,7 +236,7 @@ object NutritionDb {
 
     fun aisleFor(name: String): String = match(name)?.aisle ?: Aisles.OTHER
 
-    /** Вес ингредиента в граммах; null — если оценить нельзя. */
+    /** Ingredient weight in grams, or null when it cannot be estimated. */
     fun grams(ing: Ingredient, food: Food): Double? {
         val q = ing.quantity ?: return null
         val qq = if (ing.quantityMax != null) (q + ing.quantityMax) / 2 else q
@@ -267,7 +267,7 @@ object NutritionDb {
             if (ing.isHeader) continue
             val food = match(ing.name.ifBlank { ing.original })
             if (ing.quantity == null) {
-                // «соль по вкусу» — не влияет на калорийность
+                // "salt to taste" does not affect calories
                 if (food == null && ing.note == null) unmatched += ing.name
                 continue
             }

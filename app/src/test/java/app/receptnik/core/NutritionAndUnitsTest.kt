@@ -16,7 +16,7 @@ class NutritionAndUnitsTest {
     }
 
     @Test fun caloriesAreReasonable() {
-        // 100 г сахара ≈ 387 ккал
+        // 100 g of sugar ≈ 387 kcal
         val r = NutritionDb.calculate(listOf(IngredientParser.parse("100 г сахара")))
         assertEquals(387.0, r.total.kcal, 1.0)
         assertEquals(1.0, r.coverage, 0.0)

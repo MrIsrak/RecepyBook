@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-15
+
 ### Added
 - AI video understanding: when the caption has no recipe and a Gemini key is configured, the app downloads the video (TikTok, Instagram, Facebook) or passes the YouTube link to Gemini, and extracts ingredients and steps from speech and on-screen text.
 - Import progress stages (fetching, reading, downloading video, watching video).
@@ -49,6 +51,7 @@ The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.
 - Backup and restore, including photos.
 - Optional AI parsing via Google Gemini with a user-supplied key.
 
-[Unreleased]: https://github.com/MrIsrak/RecepyBook/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/MrIsrak/RecepyBook/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/MrIsrak/RecepyBook/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/MrIsrak/RecepyBook/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/MrIsrak/RecepyBook/releases/tag/v1.0.0

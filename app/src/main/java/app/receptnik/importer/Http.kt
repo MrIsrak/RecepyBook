@@ -66,9 +66,15 @@ object Http {
     private val noRedirect: OkHttpClient by lazy { client.newBuilder().followRedirects(false).followSslRedirects(false).build() }
 
     /** Expands a short link (vt.tiktok.com, pin.it…) by following Location headers without downloading the page. */
-    suspend fun resolve(url: String, ua: String = UA_DESKTOP, maxHops: Int = 6): String = withContext(Dispatchers.IO) {
+    suspend fun resolve(
+        url: String,
+        ua: String = UA_DESKTOP,
+        maxHops: Int = 6,
+        stopWhen: (String) -> Boolean = { false },
+    ): String = withContext(Dispatchers.IO) {
         var current = url
         repeat(maxHops) {
+            if (stopWhen(current)) return@withContext current
             val req = Request.Builder().url(current).header("User-Agent", ua).build()
             val next = noRedirect.newCall(req).execute().use { resp ->
                 if (resp.isRedirect) resp.header("Location")?.let { loc -> resp.request.url.resolve(loc)?.toString() } else null

@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.
 
 ## [Unreleased]
 
+### Fixed
+- TikTok import returned TikTok's generic home page preview ("TikTok | Make Your Day") instead of the video caption. Short-link expansion now stops at the video URL, generic previews are rejected, and two more caption sources are tried: the embed player page and the public tikwm.com API.
+
 ## [1.2.0] - 2026-10-15
 
 ### Added

@@ -57,7 +57,9 @@ import app.receptnik.AppContainer
 import app.receptnik.R
 import app.receptnik.core.CaptionParser
 import app.receptnik.core.TextUtil
+import app.receptnik.importer.AiException
 import app.receptnik.importer.ImportException
+import app.receptnik.importer.ImportStage
 import app.receptnik.importer.ImportWarning
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -76,7 +78,9 @@ class ImportViewModel(private val c: AppContainer) : ViewModel() {
     var loading by mutableStateOf(false)
     var error by mutableStateOf<ImportError?>(null)
     var warnings by mutableStateOf<List<ImportWarning>>(emptyList())
-    var aiError by mutableStateOf<String?>(null)
+    var aiError by mutableStateOf<AiException?>(null)
+    var stage by mutableStateOf(ImportStage.FETCHING)
+    var fromVideo by mutableStateOf(false)
     var hasResult by mutableStateOf(false)
     var saving by mutableStateOf(false)
     val editor = EditorState()
@@ -92,7 +96,7 @@ class ImportViewModel(private val c: AppContainer) : ViewModel() {
         }
     }
 
-    private fun reset() { error = null; warnings = emptyList(); aiError = null }
+    private fun reset() { error = null; warnings = emptyList(); aiError = null; fromVideo = false; stage = ImportStage.FETCHING }
 
     fun importLink() {
         val text = input.trim()
@@ -106,8 +110,10 @@ class ImportViewModel(private val c: AppContainer) : ViewModel() {
         }
         loading = true
         viewModelScope.launch {
-            runCatching { c.links.import(text) }
-                .onSuccess { res -> editor.load(res.draft); warnings = res.warnings; aiError = res.aiError; hasResult = true }
+            runCatching { c.links.import(text) { st -> stage = st } }
+                .onSuccess { res ->
+                    editor.load(res.draft); warnings = res.warnings; aiError = res.aiError; fromVideo = res.fromVideo; hasResult = true
+                }
                 .onFailure { error = classify(it) }
             loading = false
         }
@@ -144,7 +150,6 @@ class ImportViewModel(private val c: AppContainer) : ViewModel() {
         e is java.net.SocketTimeoutException || e is java.io.InterruptedIOException -> ImportError.Timeout
         e is kotlinx.serialization.SerializationException || e is IllegalArgumentException ->
             ImportError.Known(ImportException.Reason.BAD_RESPONSE)
-        (e.message ?: "").startsWith("Gemini") -> ImportError.Raw(e.message!!)
         else -> ImportError.Known(ImportException.Reason.SITE_ERROR)
     }
 }
@@ -166,6 +171,26 @@ private fun errorText(e: ImportError): String = when (e) {
     ImportError.PasteLink -> stringResource(R.string.err_paste_link)
     is ImportError.Raw -> e.text
 }
+
+@Composable
+private fun aiErrorText(e: AiException): String = when (e.reason) {
+    AiException.Reason.NETWORK -> stringResource(R.string.ai_err_network)
+    AiException.Reason.KEY_INVALID -> stringResource(R.string.ai_err_key)
+    AiException.Reason.MODEL_NOT_FOUND -> stringResource(R.string.ai_err_model)
+    AiException.Reason.QUOTA -> stringResource(R.string.ai_err_quota)
+    AiException.Reason.VIDEO_FAILED -> stringResource(R.string.ai_err_video)
+    AiException.Reason.OTHER -> stringResource(R.string.ai_failed, e.message ?: "")
+}
+
+@Composable
+private fun stageText(s: ImportStage): String = stringResource(
+    when (s) {
+        ImportStage.FETCHING -> R.string.fetching
+        ImportStage.READING -> R.string.stage_reading
+        ImportStage.DOWNLOADING_VIDEO -> R.string.stage_downloading_video
+        ImportStage.WATCHING_VIDEO -> R.string.stage_watching_video
+    }
+)
 
 @Composable
 private fun warningText(w: ImportWarning): String = stringResource(
@@ -252,7 +277,11 @@ fun ImportScreen(initialText: String, initialImage: String, nav: NavHostControll
                 Column(Modifier.fillMaxWidth().padding(40.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator(color = Accent, strokeWidth = 2.dp, modifier = Modifier.size(32.dp))
                     Spacer(Modifier.height(16.dp))
-                    Text(stringResource(R.string.fetching), style = MaterialTheme.typography.bodyMedium, color = muted)
+                    Text(stageText(vm.stage), style = MaterialTheme.typography.bodyMedium, color = muted)
+                    if (vm.stage == ImportStage.WATCHING_VIDEO || vm.stage == ImportStage.DOWNLOADING_VIDEO) {
+                        Text(stringResource(R.string.stage_video_hint), style = MaterialTheme.typography.bodySmall, color = muted,
+                            modifier = Modifier.padding(top = 4.dp))
+                    }
                 }
             }
             vm.error?.let { e ->
@@ -263,8 +292,9 @@ fun ImportScreen(initialText: String, initialImage: String, nav: NavHostControll
             if (vm.hasResult && !vm.loading) {
                 RecipeImage(vm.editor.image, Modifier.fillMaxWidth().aspectRatio(16f / 11f).clip(RoundedCornerShape(24.dp)))
                 PreviewSummary(vm)
+                if (vm.fromVideo) Notice(stringResource(R.string.from_video_notice))
                 vm.warnings.forEach { Notice(warningText(it)) }
-                vm.aiError?.let { Notice(stringResource(R.string.ai_failed, it)) }
+                vm.aiError?.let { Notice(aiErrorText(it), error = it.reason != AiException.Reason.OTHER) }
                 Hairline()
                 RecipeEditorFields(vm.editor)
                 Spacer(Modifier.height(80.dp))

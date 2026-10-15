@@ -26,11 +26,9 @@ class PhotoImporter(private val context: Context, private val gemini: () -> Gemi
         val jpeg = withContext(Dispatchers.IO) { loadScaledJpeg(uri) }
         val ai = gemini()
         val warnings = mutableListOf<ImportWarning>()
-        var aiError: String? = null
+        var aiError: AiException? = null
         if (ai != null) {
-            val d = runCatching { ai.extract(null, jpeg, "image/jpeg") }
-                .onFailure { aiError = it.message ?: "Gemini error" }
-                .getOrNull()
+            val d = try { ai.extract(null, jpeg, "image/jpeg") } catch (e: AiException) { aiError = e; null }
             if (d != null) return ImportResult(links.withNutrition(d.copy(imageUrl = uri.toString())))
         }
         val text = recognize(uri)

@@ -9,6 +9,7 @@ We record significant technical decisions as ADRs, following [Michael Nygard's f
 | [0003](0003-optional-ai-with-user-key.md) | Optional AI parsing with a user-supplied Gemini key | Accepted |
 | [0004](0004-local-first-storage.md) | Local-first storage with Room and JSON backups | Accepted |
 | [0005](0005-in-app-localization.md) | In-app localization with language-neutral persisted data | Accepted |
+| [0006](0006-ai-video-understanding.md) | Extract recipes from videos with Gemini | Accepted |
 
 ## Process
 

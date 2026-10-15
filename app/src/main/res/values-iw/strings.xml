@@ -206,6 +206,16 @@
     <string name="restored_n">שוחזרו מתכונים: %d</string>
     <string name="bad_backup">הקובץ אינו גיבוי תקין: %s</string>
     <string name="about_line">ספר מתכונים %s — חינמי, בלי פרסומות ובלי מנויים.</string>
+    <string name="stage_reading">קורא את הכיתוב…</string>
+    <string name="stage_downloading_video">מוריד את הסרטון…</string>
+    <string name="stage_watching_video">צופה בסרטון…</string>
+    <string name="stage_video_hint">המתכון לא בכיתוב, אז ה-AI מחלץ אותו מהסרטון. זה יכול לקחת עד דקה.</string>
+    <string name="from_video_notice">המתכון חולץ מהסרטון על ידי AI. בדקו את הכמויות לפני השמירה.</string>
+    <string name="ai_err_network">לא ניתן להתחבר ל-Google AI (generativelanguage.googleapis.com). אם מופעלים DNS פרטי, חוסם פרסומות או VPN, ודאו שהכתובת לא חסומה. נעשה שימוש בפענוח המובנה.</string>
+    <string name="ai_err_key">מפתח Gemini נדחה. בדקו אותו בהגדרות.</string>
+    <string name="ai_err_model">מודל Gemini לא נמצא. אפסו את שם המודל בהגדרות.</string>
+    <string name="ai_err_quota">המכסה החינמית של Gemini נוצלה כרגע. נסו מאוחר יותר.</string>
+    <string name="ai_err_video">ה-AI לא הצליח לעבד את הסרטון. נעשה שימוש בפענוח המובנה.</string>
     <plurals name="recipes_count">
         <item quantity="one">מתכון אחד</item>
         <item quantity="two">%d מתכונים</item>

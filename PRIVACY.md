@@ -1,6 +1,6 @@
 # Privacy Policy
 
-_Last updated: 15 October 2026_
+_Last updated: 15 October 2026 (video understanding added)_
 
 RecepyBook does not collect, store on any server, or share personal data with third parties.
 
@@ -17,6 +17,7 @@ The app connects to the internet only when you take an action:
 | Importing a link | The link you shared, plus public oEmbed endpoints of TikTok and YouTube | The link URL |
 | Saving an imported recipe | The image host of that recipe | A request for the cover image |
 | AI parsing (only with your own key) | Google Gemini API (`generativelanguage.googleapis.com`) | The post text or photo being parsed |
+| AI video understanding (only with your own key, when the caption has no recipe) | The platform's video CDN, then the Gemini Files API | The video is downloaded to a temporary file, uploaded to your Gemini account, and deleted from both places after processing |
 
 When AI parsing is used, the data is processed under the [Gemini API Terms of Service](https://ai.google.dev/gemini-api/terms).
 

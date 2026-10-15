@@ -74,4 +74,13 @@ object TextUtil {
         }
         return t.toDoubleOrNull()
     }
+
+    /**
+     * Removes an author prefix that link previews add before the caption, such as
+     * "@chef_name - …" or "Chef Name (@chef_name): …".
+     */
+    fun stripAuthorPrefix(s: String): String = s.trim()
+        .replace(Regex("""^@[\w.]+\s*[-–—:]\s*"""), "")
+        .replace(Regex("""^[^\n]{0,60}\(@[\w.]+\)\s*[:\-–—]\s*"""), "")
+        .trim()
 }

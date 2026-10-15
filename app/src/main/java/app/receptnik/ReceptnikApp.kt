@@ -44,7 +44,7 @@ class AppContainer(context: Context) {
         if (s.geminiKey.isBlank()) null
         else GeminiClient(s.geminiKey, s.geminiModel, if (s.translateRecipes) languageName(appLanguage()) else null)
     }
-    val links = LinkImporter(gemini)
+    val links = LinkImporter(gemini, context.cacheDir)
     val photos = PhotoImporter(context, gemini, links)
 }
 

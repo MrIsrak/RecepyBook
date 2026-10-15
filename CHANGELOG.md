@@ -6,10 +6,17 @@ The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.
 
 ## [Unreleased]
 
+### Added
+- AI video understanding: when the caption has no recipe and a Gemini key is configured, the app downloads the video (TikTok, Instagram, Facebook) or passes the YouTube link to Gemini, and extracts ingredients and steps from speech and on-screen text.
+- Import progress stages (fetching, reading, downloading video, watching video).
+
+### Fixed
+- AI failures are explained with actionable messages (network/DNS, invalid key, missing model, quota) instead of raw errors, and network failures are retried once.
+- Recipe titles imported from link previews no longer start with "@author - ".
+
 ### Changed
 - All project documentation, code comments, issue and pull request templates, and CI step names are now in English.
 
-### Added
 - Developer documentation: development guide, recipe import internals, localization guide, design system, release process, architecture decision records, third-party notices and a support policy.
 
 ## [1.1.0] - 2026-10-15

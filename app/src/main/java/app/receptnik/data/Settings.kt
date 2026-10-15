@@ -14,7 +14,7 @@ private val Context.dataStore by preferencesDataStore("settings")
 data class AppSettings(
     val geminiKey: String = "",
     val geminiModel: String = DEFAULT_MODEL,
-    val translateToRussian: Boolean = true,
+    val translateRecipes: Boolean = true,
     val units: UnitSystem = UnitSystem.ORIGINAL,
     val groupGroceryByAisle: Boolean = true,
 ) {
@@ -32,7 +32,7 @@ class SettingsStore(private val context: Context) {
         AppSettings(
             geminiKey = p[kKey] ?: "",
             geminiModel = p[kModel]?.takeIf { it.isNotBlank() } ?: AppSettings.DEFAULT_MODEL,
-            translateToRussian = p[kTranslate] ?: true,
+            translateRecipes = p[kTranslate] ?: true,
             units = runCatching { UnitSystem.valueOf(p[kUnits] ?: "") }.getOrDefault(UnitSystem.ORIGINAL),
             groupGroceryByAisle = p[kAisle] ?: true,
         )
@@ -43,14 +43,14 @@ class SettingsStore(private val context: Context) {
             val cur = AppSettings(
                 geminiKey = p[kKey] ?: "",
                 geminiModel = p[kModel] ?: AppSettings.DEFAULT_MODEL,
-                translateToRussian = p[kTranslate] ?: true,
+                translateRecipes = p[kTranslate] ?: true,
                 units = runCatching { UnitSystem.valueOf(p[kUnits] ?: "") }.getOrDefault(UnitSystem.ORIGINAL),
                 groupGroceryByAisle = p[kAisle] ?: true,
             )
             val n = transform(cur)
             p[kKey] = n.geminiKey.trim()
             p[kModel] = n.geminiModel.trim()
-            p[kTranslate] = n.translateToRussian
+            p[kTranslate] = n.translateRecipes
             p[kUnits] = n.units.name
             p[kAisle] = n.groupGroceryByAisle
         }

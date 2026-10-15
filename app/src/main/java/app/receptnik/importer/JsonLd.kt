@@ -118,7 +118,7 @@ object JsonLd {
             ingredients = ingredientsRaw.map { IngredientParser.parse(it) },
             steps = instructions(o["recipeInstructions"]),
             nutrition = nutrition,
-            nutritionNote = if (nutrition != null) "Данные сайта" else null,
+            nutritionNote = if (nutrition != null) NutritionNote.SITE else null,
             tags = keywords,
             cuisine = str(o["recipeCuisine"]),
             mealType = str(o["recipeCategory"]),
